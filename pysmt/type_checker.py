@@ -49,7 +49,7 @@ class SimpleTypeChecker(walkers.DagWalker):
         self.set_function(self.walk_ite, op.ITE)
         self.set_function(self.walk_int_to_real, op.TOREAL)
         self.set_function(self.walk_function, op.FUNCTION)
-
+        # BV
         self.set_function(self.walk_identity_bv, op.BV_CONSTANT)
         self.set_function(self.walk_bv_to_bool, op.BV_ULT, op.BV_ULE, op.BV_SLT,
                           op.BV_SLE)
@@ -60,9 +60,15 @@ class SimpleTypeChecker(walkers.DagWalker):
         self.set_function(self.walk_bv_rotate, op.BV_ROL, op.BV_ROR)
         self.set_function(self.walk_bv_extend, op.BV_ZEXT, op.BV_SEXT)
         self.set_function(self.walk_bv_comp, op.BV_COMP)
-        
-        self.set_function(self.walk_identity_string, op.STRING_CONSTANT)
-        
+        # Strings
+        self.set_function(self.walk_identity_string, op.STR_CONSTANT)
+        self.set_function(self.walk_str_to_str, op.STR_CONCAT, op.STR_REPLACE)
+        self.set_function(self.walk_str_to_bool, op.STR_CONTAINS,
+                                                 op.STR_PREFIXOF,
+                                                 op.STR_SUFFIXOF)
+        self.set_function(self.walk_str_to_int, op.STR_LENGTH, op.STR_TO_INT)
+        self.set_function(self.walk_int_to_str, op.INT_TO_STR)
+        # MG: Strings should be compacted with maps like for the other types!
         self.be_nice = False
 
     def _get_key(self, formula, **kwargs):
@@ -107,13 +113,28 @@ class SimpleTypeChecker(walkers.DagWalker):
 
     def walk_bv_to_bv(self, formula, args, **kwargs):
         #pylint: disable=unused-argument
-
         # We check that all children are BV and the same size
         target_bv_type = BVType(formula.bv_width())
         for a in args:
             if not a == target_bv_type:
                 return None
         return target_bv_type
+
+    def walk_str_to_str(self, formula, args, **kwargs):
+        #pylint: disable=unused-argument
+        return self.walk_type_to_type(formula, args, STRING, STRING)
+
+    def walk_str_to_int(self, formula, args, **kwargs):
+        #pylint: disable=unused-argument
+        return self.walk_type_to_type(formula, args, STRING, INT)
+
+    def walk_str_to_bool(self, formula, args, **kwargs):
+        #pylint: disable=unused-argument
+        return self.walk_type_to_type(formula, args, STRING, BOOL)
+
+    def walk_int_to_str(self, formula, args, **kwargs):
+        #pylint: disable=unused-argument
+        return self.walk_type_to_type(formula, args, INT, STRING)
 
     def walk_bv_comp(self, formula, args, **kwargs):
         # We check that all children are BV and the same size
@@ -253,98 +274,52 @@ class SimpleTypeChecker(walkers.DagWalker):
 
         return tp.return_type
 
-    def walk_str_length(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) == 1
-        assert args[0] == STRING
-        return  INT
-    
-    def walk_str_concat(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) > 1
-        for a in args:
-            if (not a.is_string_type()):
-                return None
-        return STRING
-        
-    def walk_str_contains(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) == 2
-        assert args[0].is_string_type() and args[1].is_string_type()
-        return BOOL
-    
-    def walk_str_indexof(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) == 3
-        assert args[0].is_string_type() and args[1].is_string_type() and args[2].is_int_type()
-        return INT
-    
-    def walk_str_replace(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) == 3
-        assert args[0].is_string_type() and args[1].is_string_type() and args[2].is_string_type()
-        return STRING
-        
-    def walk_str_substr(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) == 3
-        assert args[0].is_string_type() and args[1].is_int_type() and args[2].is_int_type()
-        return STRING
-        
-    def walk_str_prefixof(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) == 2
-        assert args[0].is_string_type() and args[1].is_string_type()
-        return BOOL
-    
-    def walk_str_suffixof(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) == 2
-        assert args[0].is_string_type() and args[1].is_string_type()
-        return BOOL
-    
-    def walk_str_to_int(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) == 1
-        assert args[0].is_string_type()
-        return INT
-    
-    def walk_int_to_str(self, formula, args, **kwargs):
-        assert formula is not None
-        assert len(args) == 1
-        assert args[0].is_int_type()
-        return STRING
-    
     def walk_str_to_unit16(self, formula, args, **kwargs):
         assert formula is not None
-        assert len(args) == 1
-        assert args[0].is_string_type()
-        return INT
-    
+        if len(args) == 1 and args[0].is_string_type():
+            return INT
+        return None
+
     def walk_uint16_to_str(self, formula, args, **kwargs):
         assert formula is not None
-        assert len(args) == 1
-        assert args[0].is_int_type()
-        return STRING
-    
+        if len(args) == 1 and args[0].is_int_type():
+            return STRING
+        return None
+
     def walk_str_to_uint32(self, formula, args, **kwargs):
         assert formula is not None
-        assert len(args) == 1
-        assert args[0].is_string_type()
-        return INT
-    
+        if len(args) == 1 and args[0].is_string_type():
+            return INT
+        return None
+
     def walk_uint32_to_str(self, formula, args, **kwargs):
         assert formula is not None
-        assert len(args) == 1
-        assert args[0].is_int_type()
-        return STRING
-    
+        if len(args) == 1 and args[0].is_int_type():
+            return STRING
+        return None
+
     def walk_str_charat(self, formula, args, **kwargs):
         assert formula is not None
-        assert len(args) == 2
-        assert args[0].is_string_type() and args[1].is_int_type()
-        return STRING
-        
+        if len(args) == 2 and \
+           args[0].is_string_type() and \
+           args[1].is_int_type():
+            return STRING
+        return None
+
+    def walk_str_indexof(self, formula, args, **kwargs):
+        assert formula is not None
+        if len(args) == 3 and args[0].is_string_type() and \
+           args[1].is_string_type() and args[2].is_int_type():
+            return INT
+        return None
+
+    def walk_str_substr(self, formula, args, **kwargs):
+        assert formula is not None
+        if len(args) == 3 and args[0].is_string_type() and \
+           args[1].is_int_type() and args[2].is_int_type():
+            return STRING
+        return None
+
 # EOC SimpleTypeChecker
 
 

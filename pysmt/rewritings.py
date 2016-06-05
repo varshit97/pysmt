@@ -22,7 +22,7 @@ This module defines some rewritings for pySMT formulae.
 from pysmt.walkers.dag import DagWalker
 import pysmt.typing as types
 import pysmt.operators as op
-import pysmt.environment
+
 
 class CNFizer(DagWalker):
 
@@ -90,8 +90,6 @@ class CNFizer(DagWalker):
             clauses +=[" { " + " ".join(str(lit) for lit in clause) + "} "]
         res = ["{"] + clauses + ["}"]
         return "".join(res)
-
-
 
     def walk_forall(self, formula, args, **kwargs):
         raise NotImplementedError("CNFizer does not support quantifiers")
@@ -256,7 +254,7 @@ class NNFizer(DagWalker):
         DagWalker.__init__(self, env=environment)
         self.mgr = self.env.formula_manager
         self.set_function(self.walk_theory_relation, *op.RELATIONS)
-        self.set_function(self.walk_theory_relation, *op.STRING_OPERATORS)
+        self.set_function(self.walk_theory_relation, *op.STR_OPERATORS)
 
     def convert(self, formula):
         """ Converts the given formula in NNF """
@@ -305,7 +303,7 @@ class NNFizer(DagWalker):
             return [i, mgr.Not(i), t, e]
 
         else:
-            assert formula.is_string_op() or \
+            assert formula.is_str_op() or \
                 formula.is_symbol() or \
                 formula.is_function_application() or \
                 formula.is_bool_constant() or \
@@ -398,11 +396,11 @@ class PrenexNormalizer(DagWalker):
         #    res = Q(vars, res)
         self.set_function(self.walk_error, *op.ALL_TYPES)
         self.set_function(self.walk_quantifier, *op.QUANTIFIERS)
-        self.set_function(self.walk_theory_op, *op.BV_OPERATORS)
         self.set_function(self.walk_constant, *op.CONSTANTS)
-        self.set_function(self.walk_theory_relation, *op.RELATIONS)
+        self.set_function(self.walk_theory_op, *op.BV_OPERATORS)
         self.set_function(self.walk_theory_op, *op.LIRA_OPERATORS)
-        self.set_function(self.walk_theory_op, *op.STRING_OPERATORS)
+        self.set_function(self.walk_theory_op, *op.STR_OPERATORS)
+        self.set_function(self.walk_theory_relation, *op.RELATIONS)
         self.set_function(self.walk_symbol, op.SYMBOL)
         self.set_function(self.walk_function, op.FUNCTION)
         self.set_function(self.walk_ite, op.ITE)
@@ -413,7 +411,6 @@ class PrenexNormalizer(DagWalker):
 
 
     def normalize(self, formula):
-        print formula
         quantifiers, matrix = self.walk(formula)
         res = matrix
         for Q, qvars in quantifiers:
@@ -427,14 +424,14 @@ class PrenexNormalizer(DagWalker):
 
     def walk_symbol(self, formula, **kwargs):
         if formula.symbol_type().is_bool_type():
-            return [],formula
-        return [],None
+            return [], formula
+        return None # Note: When returning None, we do not pack it into a tuple!
 
     def walk_constant(self, formula, **kwargs):
         #pylint: disable=unused-argument
         if formula.is_bool_constant():
             return [],formula
-        return [],None
+        return None
 
     def walk_conj_disj(self, formula, args, **kwargs):
         #pylint: disable=unused-argument
@@ -546,12 +543,13 @@ class PrenexNormalizer(DagWalker):
 
     def walk_theory_op(self, formula, **kwargs):
         #pylint: disable=unused-argument
-        return [],None
+        return None
 
     def walk_function(self, formula, **kwargs):
         if formula.function_name().symbol_type().return_type.is_bool_type():
             return [], formula
         return None
+
 
 class AIGer(DagWalker):
     """Converts a formula into an And-Inverted-Graph."""

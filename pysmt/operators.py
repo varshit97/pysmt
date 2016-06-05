@@ -29,7 +29,7 @@ ALL_TYPES = list(xrange(0,63))
 (
 FORALL, EXISTS, AND, OR, NOT, IMPLIES, IFF, # Boolean Logic (0-6)
 SYMBOL, FUNCTION,                           # Symbols and functions calls (7-8)
-REAL_CONSTANT, BOOL_CONSTANT, INT_CONSTANT,STRING_CONSTANT, # Constants (9-12)
+REAL_CONSTANT, BOOL_CONSTANT, INT_CONSTANT, STR_CONSTANT, # Constants (9-12)
 PLUS, MINUS, TIMES,                         # LIA/LRA operators (13-15)
 LE, LT, EQUALS,                             # LIA/LRA relations (16-18)
 ITE,                                        # Term-ite (19)
@@ -53,21 +53,23 @@ BV_COMP,                                    # Returns 1_1 if the arguments are
                                             # equal otherwise it returns 0_1 (44)
 BV_SDIV, BV_SREM,                           # Signed Division and Reminder(45-46)
 BV_ASHR,                                    # Arithmetic shift right (47)
-#STRINGS
-STR_LENGTH,                                 #length(48)
-STR_CONCAT,                                 #concat(49)
-STR_CONTAINS,                               #contains(50)
-STR_INDEXOF,                                #indexOf(51)
-STR_REPLACE,                                #replace (52)
-STR_SUBSTR,                                 #Sub String (53)
+#
+# STRINGS
+#
+STR_LENGTH,                                 # length(48)
+STR_CONCAT,                                 # concat(49)
+STR_CONTAINS,                               # contains(50)
+STR_INDEXOF,                                # indexOf(51)
+STR_REPLACE,                                # replace (52)
+STR_SUBSTR,                                 # Sub String (53)
 STR_PREFIXOF,                               # prefix (54)
 STR_SUFFIXOF,                               # suffix (55)
-STRING_TO_INTEGER,                          # atoi (56)
-INTEGER_TO_STRING,                          # itoa (57)
-STRING_TO_UINT16,                           # atoi - 16bit (58) 
-UINT16_TO_STRING,                           # itoa - 16 bit (59)
-STRING_TO_UINT32,                           # atoi - 32 bit unsigned (60)
-UINT32_TO_STRING,                           # itoa - 32 bit unsigned  (61)     
+STR_TO_INT,                                 # atoi (56)
+INT_TO_STR,                                 # itoa (57)
+STR_TO_UINT16,                              # atoi - 16bit (58)
+UINT16_TO_STR,                              # itoa - 16 bit (59)
+STR_TO_UINT32,                              # atoi - 32 bit unsigned (60)
+UINT32_TO_STR,                              # itoa - 32 bit unsigned  (61)
 STR_CHARAT,                                 # Char at an index (62)
 ) = ALL_TYPES
 
@@ -77,10 +79,8 @@ BOOL_CONNECTIVES = frozenset([AND, OR, NOT, IMPLIES, IFF])
 
 BOOL_OPERATORS = frozenset(QUANTIFIERS | BOOL_CONNECTIVES)
 
-RELATIONS = frozenset([LE, LT, EQUALS, BV_ULE, BV_ULT, BV_SLT, BV_SLE])
-
 CONSTANTS = frozenset([REAL_CONSTANT, BOOL_CONSTANT, INT_CONSTANT,
-                       BV_CONSTANT, STRING_CONSTANT])
+                       BV_CONSTANT, STR_CONSTANT])
 
 BV_OPERATORS = frozenset([BV_CONSTANT, BV_NOT, BV_AND, BV_OR, BV_XOR,
                           BV_CONCAT, BV_EXTRACT, BV_ULT, BV_ULE, BV_NEG, BV_ADD,
@@ -88,14 +88,22 @@ BV_OPERATORS = frozenset([BV_CONSTANT, BV_NOT, BV_AND, BV_OR, BV_XOR,
                           BV_ROL, BV_ROR, BV_ZEXT, BV_SEXT, BV_SLT, BV_SLE,
                           BV_COMP, BV_SDIV, BV_SREM, BV_ASHR])
 
-STRING_OPERATORS = frozenset([  STRING_CONSTANT, STR_LENGTH, STR_CONCAT, STR_CONTAINS, STR_INDEXOF, STR_REPLACE,
-                                STR_SUBSTR, STR_PREFIXOF, STR_SUFFIXOF, STRING_TO_INTEGER, INTEGER_TO_STRING,
-                                STRING_TO_UINT16, UINT16_TO_STRING, STRING_TO_UINT32, UINT32_TO_STRING, STR_CHARAT ])
+STR_OPERATORS = frozenset([STR_CONSTANT, STR_LENGTH, STR_CONCAT, STR_CONTAINS, STR_INDEXOF, STR_REPLACE,
+                           STR_SUBSTR, STR_PREFIXOF, STR_SUFFIXOF, STR_TO_INT, INT_TO_STR,
+                           STR_TO_UINT16, UINT16_TO_STR, STR_TO_UINT32, UINT32_TO_STR, STR_CHARAT ])
+
+# Relations are predicates on theory atoms.
+# Relations have boolean type. They are a subset of the operators for a theory
+# MG: Add STRINGS relations here
+#     E.g., StrContains is a relation (predicate) since it has a Boolean value.
+
+RELATIONS = frozenset([LE, LT, EQUALS, BV_ULE, BV_ULT, BV_SLT, BV_SLE,
+                       STR_CONTAINS, STR_PREFIXOF, STR_SUFFIXOF])
 
 LIRA_OPERATORS = frozenset([PLUS, MINUS, TIMES, TOREAL])
 CUSTOM_NODE_TYPES = []
 
-THEORY_OPERATORS = LIRA_OPERATORS | BV_OPERATORS | STRING_OPERATORS
+THEORY_OPERATORS = LIRA_OPERATORS | BV_OPERATORS | STR_OPERATORS
 
 def new_node_type(new_node_id=None):
     """Adds a new node type to the list of custom node types and returns the ID."""
@@ -135,7 +143,7 @@ __OP_STR__ = {
     REAL_CONSTANT : "REAL_CONSTANT",
     BOOL_CONSTANT : "BOOL_CONSTANT",
     INT_CONSTANT : "INT_CONSTANT",
-    STRING_CONSTANT : "STRING_CONSTANT",
+    STR_CONSTANT : "STR_CONSTANT",
     PLUS : "PLUS",
     MINUS : "MINUS",
     TIMES : "TIMES",
@@ -172,18 +180,18 @@ __OP_STR__ = {
     BV_SREM : "BV_SREM",
     BV_ASHR : "BV_ASHR",
     STR_LENGTH: "STR_LENGTH",
-    STR_CONCAT: "STR_CONCAT", 
+    STR_CONCAT: "STR_CONCAT",
     STR_CONTAINS: "STR_CONTAINS",
     STR_INDEXOF: "STR_INDEXOF",
     STR_REPLACE:"STR_REPLACE",
     STR_SUBSTR: "STR_SUBSTR",
     STR_PREFIXOF: "STR_PREFIXOF",
     STR_SUFFIXOF: "STR_SUFFIXOF",
-    STRING_TO_INTEGER:"STRING_TO_INTEGER",
-    INTEGER_TO_STRING:"INTEGER_TO_STRING",
-    STRING_TO_UINT16:"STRING_TO_UINT16",
-    UINT16_TO_STRING:"UINT16_TO_STRING",
-    STRING_TO_UINT32:"STRING_TO_UINT32",
-    UINT32_TO_STRING:"UINT32_TO_STRING",
+    STR_TO_INT:"STRING_TO_INT",
+    INT_TO_STR:"INT_TO_STR",
+    STR_TO_UINT16:"STRING_TO_UINT16",
+    UINT16_TO_STR:"UINT16_TO_STR",
+    STR_TO_UINT32:"STRING_TO_UINT32",
+    UINT32_TO_STR:"UINT32_TO_STR",
     STR_CHARAT:"STR_CHARAT"
 }

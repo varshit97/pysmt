@@ -21,7 +21,7 @@ import collections
 import pysmt.environment
 from pysmt.operators import (FORALL, EXISTS, AND, OR, NOT, IMPLIES, IFF,
                              SYMBOL, FUNCTION,
-                             REAL_CONSTANT, BOOL_CONSTANT, INT_CONSTANT,STRING_CONSTANT,
+                             REAL_CONSTANT, BOOL_CONSTANT, INT_CONSTANT,
                              PLUS, MINUS, TIMES,
                              LE, LT, EQUALS,
                              ITE,
@@ -37,25 +37,18 @@ from pysmt.operators import (FORALL, EXISTS, AND, OR, NOT, IMPLIES, IFF,
                              BV_COMP,
                              BV_SDIV, BV_SREM,
                              BV_ASHR,
-                             STR_LENGTH, 
-                             STR_CONCAT, 
-                             STR_CONTAINS, 
-                             STR_INDEXOF, 
-                             STR_REPLACE,
-                             STR_SUBSTR, 
-                             STR_PREFIXOF, 
-                             STR_SUFFIXOF, 
-                             STRING_TO_INTEGER, 
-                             INTEGER_TO_STRING,
-                             STRING_TO_UINT16, 
-                             UINT16_TO_STRING, 
-                             STRING_TO_UINT32, 
-                             UINT32_TO_STRING, 
-                             STR_CHARAT
-                             )
+                             STR_CONSTANT,
+                             STR_LENGTH, STR_CONCAT, STR_CONTAINS,
+                             STR_INDEXOF, STR_REPLACE, STR_SUBSTR,
+                             STR_PREFIXOF, STR_SUFFIXOF,
+                             STR_TO_INT, INT_TO_STR,
+                             STR_TO_UINT16, UINT16_TO_STR,
+                             STR_TO_UINT32, UINT32_TO_STR,
+                             STR_CHARAT)
 from pysmt.operators import  (BOOL_OPERATORS, THEORY_OPERATORS,
                               BV_OPERATORS, LIRA_OPERATORS,
-                              RELATIONS, CONSTANTS, STRING_OPERATORS)
+                              STR_OPERATORS,
+                              RELATIONS, CONSTANTS)
 from pysmt.typing import BOOL, REAL, INT, BVType, STRING
 from pysmt.decorators import deprecated
 from pysmt.utils import is_python_integer, is_python_rational, is_python_boolean
@@ -166,7 +159,7 @@ class FNode(object):
                 return False
             if _type.is_bool_type() and self.node_type() != BOOL_CONSTANT:
                 return False
-            if _type.is_string_type() and self.node_type() != STRING_CONSTANT:
+            if _type.is_string_type() and self.node_type() != STR_CONSTANT:
                 return False
             if _type.is_bv_type():
                 if self.node_type() != BV_CONSTANT:
@@ -477,7 +470,7 @@ class FNode(object):
         """Return the extension step for BVZext and BVSext."""
         assert self.is_bv_zext() or self.is_bv_sext()
         return self._content.payload[1]
-    
+
     def __str__(self):
         return self.serialize(threshold=5)
 
@@ -507,9 +500,9 @@ class FNode(object):
         All nodes are terms, except for function definitions.
         """
         return not (self.is_symbol() and self.symbol_type().is_function_type())
-    
-    def is_string_op(self):
-        return self.node_type() in STRING_OPERATORS
+
+    def is_str_op(self):
+        return self.node_type() in STR_OPERATORS
 
     def symbol_type(self):
         """Return the type of the Symbol."""
@@ -533,7 +526,7 @@ class FNode(object):
             return REAL
         elif self.node_type() == BOOL_CONSTANT:
             return BOOL
-        elif self.node_type() == STRING_CONSTANT:
+        elif self.node_type() == STR_CONSTANT:
             return STRING
         else:
             assert self.node_type() == BV_CONSTANT,\

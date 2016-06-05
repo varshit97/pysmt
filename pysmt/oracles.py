@@ -141,30 +141,28 @@ class TheoryOracle(pysmt.walkers.DagWalker):
         self.set_function(self.walk_constant,
                           op.REAL_CONSTANT, op.BOOL_CONSTANT,
                           op.INT_CONSTANT, op.BV_CONSTANT,
-                          op.STRING_CONSTANT)
+                          op.STR_CONSTANT)
         self.set_function(self.walk_symbol, op.SYMBOL)
         self.set_function(self.walk_function, op.FUNCTION)
         self.set_function(self.walk_lira, op.TOREAL)
         self.set_function(self.walk_times, op.TIMES)
         self.set_function(self.walk_plus, op.PLUS)
         self.set_function(self.walk_equals, op.EQUALS)
-        self.set_function(self.walk_strings, *op.STRING_OPERATORS)
-
+        self.set_function(self.walk_strings, *op.STR_OPERATORS)
 
     def walk_combine(self, formula, args, **kwargs):
-        #pylint: disable=unused-argument
         """Combines the current theory value of the children"""
+        #pylint: disable=unused-argument
         if len(args) == 1:
             return args[0].copy()
-
         theory_out = args[0]
         for t in args[1:]:
             theory_out = theory_out.combine(t)
         return theory_out
 
     def walk_constant(self, formula, args, **kwargs):
-        #pylint: disable=unused-argument
         """Returns a new theory object with the type of the constant."""
+        #pylint: disable=unused-argument
         if formula.is_real_constant():
             theory_out = Theory(real_arithmetic=True, real_difference=True)
         elif formula.is_int_constant():
@@ -176,7 +174,6 @@ class TheoryOracle(pysmt.walkers.DagWalker):
         else:
             assert formula.is_bool_constant()
             theory_out = Theory()
-
         return theory_out
 
     def walk_symbol(self, formula, args, **kwargs):
@@ -244,14 +241,13 @@ class TheoryOracle(pysmt.walkers.DagWalker):
         return self.walk_combine(formula, args)
 
     def walk_strings(self, formula, args, **kwargs):
-        #pylint: disable=unused-argument
         """Extends the Theory with Strings."""
+        #pylint: disable=unused-argument
         if formula.is_string_constant():
             theory_out = Theory(strings=True)
         else:
             theory_out = args[0].set_strings() # This makes a copy of args[0]
         return theory_out
-
 
     def get_theory(self, formula):
         """Returns the thoery for the formula."""
@@ -283,7 +279,6 @@ class FreeVarsOracle(pysmt.walkers.DagWalker):
         # These are the only 2 cases that can introduce elements.
         self.set_function(self.walk_symbol, op.SYMBOL)
         self.set_function(self.walk_function, op.FUNCTION)
-
 
     def get_free_variables(self, formula):
         """Returns the set of Symbols appearing free in the formula."""
@@ -338,13 +333,12 @@ class AtomsOracle(pysmt.walkers.DagWalker):
         self.set_function(self.walk_constant, *op.CONSTANTS)
         self.set_function(self.walk_theory_op, *op.BV_OPERATORS)
         self.set_function(self.walk_theory_op, *op.LIRA_OPERATORS)
-        self.set_function(self.walk_theory_op, *op.STRING_OPERATORS)
+        self.set_function(self.walk_theory_op, *op.STR_OPERATORS)
         self.set_function(self.walk_theory_relation, *op.RELATIONS)
 
         self.set_function(self.walk_symbol, op.SYMBOL)
         self.set_function(self.walk_function, op.FUNCTION)
         self.set_function(self.walk_ite, op.ITE)
-
 
     def get_atoms(self, formula):
         """Returns the set of atoms appearing in the formula."""

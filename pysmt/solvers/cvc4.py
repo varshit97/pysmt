@@ -144,7 +144,7 @@ class CVC4Solver(Solver, SmtLibBasicSolver, SmtLibIgnoreMixin):
 
     def _exit(self):
         del self.cvc4
-    
+
     def set_option(self, name, value):
         """Sets an option.
 
@@ -153,7 +153,7 @@ class CVC4Solver(Solver, SmtLibBasicSolver, SmtLibIgnoreMixin):
         :type value: String
         """
         self.cvc4.setOption(name, CVC4.SExpr(value))
-        
+
 
 
 class CVC4Converter(Converter, DagWalker):
@@ -384,10 +384,10 @@ class CVC4Converter(Converter, DagWalker):
     def walk_bv_ashr (self, formula, args, **kwargs):
         return self.mkExpr(CVC4.BITVECTOR_ASHR, args[0], args[1])
 
-    def walk_string_constant(self, formula, args, **kwargs):
+    def walk_str_constant(self, formula, args, **kwargs):
         #assert type(formula.constant_value()) == str
         return self.mkConst(CVC4.CVC4String(formula.constant_value()))
-    
+
     def walk_str_length (self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_LENGTH , args[0])
     def walk_str_concat(self, formula, args, **kwargs):
@@ -418,7 +418,7 @@ class CVC4Converter(Converter, DagWalker):
         return self.mkExpr(CVC4.STRING_U32TOS, args[0])
     def walk_str_charat(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_CHARAT, args[0], args[1])
-    
+
     def _type_to_cvc4(self, tp):
         if tp.is_bool_type():
             return self.boolType

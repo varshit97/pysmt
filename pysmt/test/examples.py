@@ -34,8 +34,8 @@ from pysmt.shortcuts import (Symbol, Function,
                              BVLShl, BVLShr,BVRol, BVRor,
                              BVZExt, BVSExt, BVSub, BVComp, BVAShr, BVSLE,
                              BVSLT, BVSGT, BVSGE, BVSDiv, BVSRem,
-                             String, StrCharat, StrConcat, StrContains, StrIndexof,
-                             StrLength, StrPrefixof, StrReplace, StrSubstr, StrSuffixof, StrToInt,
+                             String, StrCharAt, StrConcat, StrContains, StrIndexOf,
+                             StrLength, StrPrefixOf, StrReplace, StrSubstr, StrSuffixOf, StrToInt,
                              IntToStr, Uint16ToStr, Uint32ToStr, StrToUint16, StrToUint32)
 from pysmt.typing import REAL, BOOL, INT, FunctionType, BV8, BV16, STRING
 
@@ -145,16 +145,15 @@ def get_example_formulae(environment=None):
                     is_sat=False,
                     logic=pysmt.logics.QF_IDL
                 ),
-                  
-            #test_prenex_examples is failing for this example.. PLEASE  CHECK....
+
             # x ? 7: (p + -1) * 3 = q
-            #Example(expr=Equals(Ite(x,
-            #                        Int(7),
-            #                        Times(Plus(p, Int(-1)), Int(3))), q),
-            #        is_valid=False,
-            #        is_sat=True,
-            #        logic=pysmt.logics.QF_LIA
-            #    ),
+            Example(expr=Equals(Ite(x,
+                                   Int(7),
+                                   Times(Plus(p, Int(-1)), Int(3))), q),
+                   is_valid=False,
+                   is_sat=True,
+                   logic=pysmt.logics.QF_LIA
+               ),
 
             Example(expr=LT(p, Plus(q, Int(1))),
                     is_valid=False,
@@ -199,13 +198,12 @@ def get_example_formulae(environment=None):
                     logic=pysmt.logics.QF_RDL
                 ),
 
-            #test_prenex_examples is failing for this example.. PLEASE  CHECK....
             # x ? 7: (s + -1) * 3 = r
-            #Example(expr=Equals( Ite(x, Real(7), Times(Plus(s, Real(-1)), Real(3))), r),
-            #        is_valid=False,
-            #        is_sat=True,
-            #        logic=pysmt.logics.QF_LRA
-            #    ),
+            Example(expr=Equals( Ite(x, Real(7), Times(Plus(s, Real(-1)), Real(3))), r),
+                   is_valid=False,
+                   is_sat=True,
+                   logic=pysmt.logics.QF_LRA
+               ),
 
             #
             # EUF
@@ -564,42 +562,42 @@ def get_example_formulae(environment=None):
                     is_sat=False,
                     logic=pysmt.logics.QF_UFLIRA
                 ),
-                  
+
             # ("mystr" == str1)
             Example(expr=Equals(String("mystr"), str1),
                     is_valid=False,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
-              
-            # 5 < len(str1) && ( "mystr" == str1)    
+
+            # 5 < len(str1) && ( "mystr" == str1)
             Example(expr=And(LT(Int(5), StrLength(str1)),
                              Equals(String("mystr"), str1)),
                     is_valid=False,
                     is_sat=False,
                     logic=pysmt.logics.QF_SLIA),
-             
-            # len(str1) == 5 && "my"+"str" == str1     
+
+            # len(str1) == 5 && "my"+"str" == str1
             Example(expr=And(Equals(Int(5), StrLength(str1)),
                              Equals(StrConcat(String("my"),String("str")), str1)),
                     is_valid=False,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
             # ("mystr")[1] == "y"
-            Example(expr=Equals(StrCharat(String("mystr"), Int(1)), String("y") ),
+            Example(expr=Equals(StrCharAt(String("mystr"), Int(1)), String("y") ),
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
-                  
+
             Example(expr=StrContains(String("mystr"),String("my")),
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
 
-            Example(expr=Equals(StrIndexof(String("mystr"),String("str"),Int(1)),Int(2)),
+            Example(expr=Equals(StrIndexOf(String("mystr"),String("str"),Int(1)),Int(2)),
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
-            
+
             Example(expr=Equals(StrReplace(String("mystr"),String("str"),String("my")),String("mymy")),
                     is_valid=True,
                     is_sat=True,
@@ -610,16 +608,16 @@ def get_example_formulae(environment=None):
                     is_sat=False,
                     logic=pysmt.logics.QF_SLIA),
 
-            Example(expr=StrPrefixof(String("my"), String("mystr")),
+            Example(expr=StrPrefixOf(String("my"), String("mystr")),
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
 
-            Example(expr=StrSuffixof(String("str"), String("mystr")),
+            Example(expr=StrSuffixOf(String("str"), String("mystr")),
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
-            
+
             Example(expr=Equals(IntToStr(Int(9)), String("9")),
                     is_valid=True,
                     is_sat=True,
@@ -629,28 +627,28 @@ def get_example_formulae(environment=None):
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
-            
+
             Example(expr=Equals(StrToUint16(String("9")), Int(9)),
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
-            
+
             Example(expr=Equals(StrToUint32(String("9")), Int(9)),
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
-            
+
             Example(expr=Equals(Uint16ToStr(Int(9)), String("9")),
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
-            
+
             Example(expr=Equals(Uint32ToStr(Int(9)), String("9")),
                     is_valid=True,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
-                  
-             # Test complex names
+
+            # Test complex names
             Example(expr=And(Symbol("Did you know that any string works? #yolo"),
                              Symbol("10"),
                              Symbol("|#somesolverskeepthe||"),
