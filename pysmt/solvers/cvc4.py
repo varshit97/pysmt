@@ -385,37 +385,38 @@ class CVC4Converter(Converter, DagWalker):
         return self.mkExpr(CVC4.BITVECTOR_ASHR, args[0], args[1])
 
     def walk_str_constant(self, formula, args, **kwargs):
-        #assert type(formula.constant_value()) == str
         return self.mkConst(CVC4.CVC4String(formula.constant_value()))
 
     def walk_str_length (self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_LENGTH , args[0])
+
     def walk_str_concat(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_CONCAT, args)
+
     def walk_str_contains(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_STRCTN, args[0], args[1])
+
     def walk_str_indexof(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_STRIDOF, args[0], args[1], args[2])
+
     def walk_str_replace(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_STRREPL, args[0], args[1], args[2])
+
     def walk_str_substr(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_SUBSTR, args[0], args[1], args[2])
+
     def walk_str_prefixof(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_PREFIX, args[0], args[1])
+
     def walk_str_suffixof(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_SUFFIX, args[0], args[1])
+
     def walk_str_to_int(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_STOI, args[0])
+
     def walk_int_to_str(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_ITOS, args[0])
-    def walk_str_to_unit16(self, formula, args, **kwargs):
-        return self.mkExpr(CVC4.STRING_STOU16, args[0])
-    def walk_uint16_to_str(self, formula, args, **kwargs):
-        return self.mkExpr(CVC4.STRING_U16TOS, args[0])
-    def walk_str_to_uint32(self, formula, args, **kwargs):
-        return self.mkExpr(CVC4.STRING_STOU32, args[0])
-    def walk_uint32_to_str(self, formula, args, **kwargs):
-        return self.mkExpr(CVC4.STRING_U32TOS, args[0])
+
     def walk_str_charat(self, formula, args, **kwargs):
         return self.mkExpr(CVC4.STRING_CHARAT, args[0], args[1])
 

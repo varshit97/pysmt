@@ -42,8 +42,6 @@ from pysmt.operators import (FORALL, EXISTS, AND, OR, NOT, IMPLIES, IFF,
                              STR_INDEXOF, STR_REPLACE, STR_SUBSTR,
                              STR_PREFIXOF, STR_SUFFIXOF,
                              STR_TO_INT, INT_TO_STR,
-                             STR_TO_UINT16, UINT16_TO_STR,
-                             STR_TO_UINT32, UINT32_TO_STR,
                              STR_CHARAT)
 from pysmt.operators import  (BOOL_OPERATORS, THEORY_OPERATORS,
                               BV_OPERATORS, LIRA_OPERATORS,

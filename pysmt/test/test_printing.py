@@ -276,10 +276,6 @@ SERIALIZED_EXAMPLES = [
     """str.suffixof("str", "mystr")""",
     """(int.to.str(9) = "9")""",
     """(str.to.int("9") = 9)""",
-#    """(str.to.uint16("9") = 9)""",
-#    """(str.to.uint32("9") = 9)""",
-#    """(uint16.to.str(9) = "9")""",
-#    """(uint32.to.str(9) = "9")""",
     """('Did you know that any string works? #yolo' & '10' & '|#somesolverskeepthe||' & ' ')""",
     ]
 

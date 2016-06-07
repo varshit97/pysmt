@@ -344,26 +344,6 @@ class HRPrinter(TreeWalker):
         self.walk(formula.arg(0))
         self.write(")")
 
-    def walk_str_to_unit16(self,formula, **kwargs):
-        self.write("str.to.uint16(" )
-        self.walk(formula.arg(0))
-        self.write(")")
-
-    def walk_uint16_to_str(self,formula, **kwargs):
-        self.write("uint16.to.str(" )
-        self.walk(formula.arg(0))
-        self.write(")")
-
-    def walk_str_to_uint32(self,formula, **kwargs):
-        self.write("str.to.uint32(" )
-        self.walk(formula.arg(0))
-        self.write(")")
-
-    def walk_uint32_to_str(self,formula, **kwargs):
-        self.write("uint32.to.str(" )
-        self.walk(formula.arg(0))
-        self.write(")")
-
 
 class HRSerializer(object):
     """Return the serialized version of the formula as a string."""

@@ -24,7 +24,7 @@ these operators.
 from six.moves import xrange
 
 
-ALL_TYPES = list(xrange(0,63))
+ALL_TYPES = list(xrange(0,59))
 
 (
 FORALL, EXISTS, AND, OR, NOT, IMPLIES, IFF, # Boolean Logic (0-6)
@@ -66,11 +66,7 @@ STR_PREFIXOF,                               # prefix (54)
 STR_SUFFIXOF,                               # suffix (55)
 STR_TO_INT,                                 # atoi (56)
 INT_TO_STR,                                 # itoa (57)
-STR_TO_UINT16,                              # atoi - 16bit (58)
-UINT16_TO_STR,                              # itoa - 16 bit (59)
-STR_TO_UINT32,                              # atoi - 32 bit unsigned (60)
-UINT32_TO_STR,                              # itoa - 32 bit unsigned  (61)
-STR_CHARAT,                                 # Char at an index (62)
+STR_CHARAT,                                 # Char at an index (58)
 ) = ALL_TYPES
 
 QUANTIFIERS = frozenset([FORALL, EXISTS])
@@ -88,9 +84,10 @@ BV_OPERATORS = frozenset([BV_CONSTANT, BV_NOT, BV_AND, BV_OR, BV_XOR,
                           BV_ROL, BV_ROR, BV_ZEXT, BV_SEXT, BV_SLT, BV_SLE,
                           BV_COMP, BV_SDIV, BV_SREM, BV_ASHR])
 
-STR_OPERATORS = frozenset([STR_CONSTANT, STR_LENGTH, STR_CONCAT, STR_CONTAINS, STR_INDEXOF, STR_REPLACE,
-                           STR_SUBSTR, STR_PREFIXOF, STR_SUFFIXOF, STR_TO_INT, INT_TO_STR,
-                           STR_TO_UINT16, UINT16_TO_STR, STR_TO_UINT32, UINT32_TO_STR, STR_CHARAT ])
+STR_OPERATORS = frozenset([STR_CONSTANT, STR_LENGTH, STR_CONCAT, STR_CONTAINS,
+                           STR_INDEXOF, STR_REPLACE,
+                           STR_SUBSTR, STR_PREFIXOF, STR_SUFFIXOF, STR_CHARAT,
+                           STR_TO_INT, INT_TO_STR,])
 
 # Relations are predicates on theory atoms.
 # Relations have boolean type. They are a subset of the operators for a theory
@@ -186,9 +183,5 @@ __OP_STR__ = {
     STR_SUFFIXOF: "STR_SUFFIXOF",
     STR_TO_INT:"STRING_TO_INT",
     INT_TO_STR:"INT_TO_STR",
-    STR_TO_UINT16:"STRING_TO_UINT16",
-    UINT16_TO_STR:"UINT16_TO_STR",
-    STR_TO_UINT32:"STRING_TO_UINT32",
-    UINT32_TO_STR:"UINT32_TO_STR",
     STR_CHARAT:"STR_CHARAT"
 }

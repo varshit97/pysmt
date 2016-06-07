@@ -90,10 +90,6 @@ class Walker(object):
         self.functions[op.STR_SUFFIXOF] = self.walk_str_suffixof
         self.functions[op.STR_TO_INT] = self.walk_str_to_int
         self.functions[op.INT_TO_STR] = self.walk_int_to_str
-        self.functions[op.STR_TO_UINT16] = self.walk_str_to_unit16
-        self.functions[op.UINT16_TO_STR] = self.walk_uint16_to_str
-        self.functions[op.STR_TO_UINT32] = self.walk_str_to_uint32
-        self.functions[op.UINT32_TO_STR] = self.walk_uint32_to_str
         self.functions[op.STR_CHARAT] = self.walk_str_charat
 
         undefined_types = set(op.ALL_TYPES) - set(self.functions.keys())
@@ -302,18 +298,6 @@ class Walker(object):
         return self.walk_error(formula, **kwargs)
 
     def walk_int_to_str(self,formula, **kwargs):
-        return self.walk_error(formula, **kwargs)
-
-    def walk_str_to_unit16(self,formula, **kwargs):
-        return self.walk_error(formula, **kwargs)
-
-    def walk_uint16_to_str(self,formula, **kwargs):
-        return self.walk_error(formula, **kwargs)
-
-    def walk_str_to_uint32(self,formula, **kwargs):
-        return self.walk_error(formula, **kwargs)
-
-    def walk_uint32_to_str(self,formula, **kwargs):
         return self.walk_error(formula, **kwargs)
 
     def walk_str_charat(self,formula, **kwargs):

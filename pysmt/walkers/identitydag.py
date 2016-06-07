@@ -215,17 +215,5 @@ class IdentityDagWalker(DagWalker):
     def walk_int_to_str(self, formula, args, **kwargs):
         return self.mgr.IntToStr(args[0])
 
-    def walk_str_to_unit16(self, formula, args, **kwargs):
-        return self.mgr.StrToUint16(args[0])
-
-    def walk_uint16_to_str(self, formula, args, **kwargs):
-        return self.mgr.Uint16ToStr(args[0])
-
-    def walk_str_to_uint32(self, formula, args, **kwargs):
-        return self.mgr.StrToUint32(args[0])
-
-    def walk_uint32_to_str(self, formula, args, **kwargs):
-        return self.mgr.Uint32ToStr(args[0])
-
     def walk_str_charat(self, formula, args, **kwargs):
         return self.mgr.StrCharAt(args[0], args[1])

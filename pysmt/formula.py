@@ -972,36 +972,6 @@ class FormulaManager(object):
         """
         return self.create_node(node_type=op.INT_TO_STR, args=(x, ))
 
-    def StrToUint16(self, s):
-        """
-        where s is a string term. It returns the corresponding natural number if s is valid;
-        otherwise, it returns -1.
-        """
-        #MG: Unclear how this is relevant when using INTs. INTs are infinite precision.
-        # Same applies for 32 case.
-        return self.create_node(node_type=op.STR_TO_UINT16, args=(s, ))
-
-    def Uint16ToStr(self, x):
-        """
-        where x is an integer term. It returns the corresponding string if x is a natural number;
-        otherwise, it returns an empty string.
-        """
-        return self.create_node(node_type=op.UINT16_TO_STR, args=(x, ))
-
-    def StrToUint32(self, s):
-        """
-        where s is a string term. It returns the corresponding natural number if s is valid;
-        otherwise, it returns -1.
-        """
-        return self.create_node(node_type=op.STR_TO_UINT32, args=(s, ))
-
-    def Uint32ToStr(self, x):
-        """
-        where x is an integer term. It returns the corresponding string if x is a natural number;
-        otherwise, it returns an empty string.
-        """
-        return self.create_node(node_type=op.UINT32_TO_STR, args=(x, ))
-
     def StrCharAt(self, s, i):
         """Returns a single character String at position i.
 

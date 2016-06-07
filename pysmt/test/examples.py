@@ -629,26 +629,6 @@ def get_example_formulae(environment=None):
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
 
-            # Example(expr=Equals(StrToUint16(String("9")), Int(9)),
-            #         is_valid=True,
-            #         is_sat=True,
-            #         logic=pysmt.logics.QF_SLIA),
-
-            # Example(expr=Equals(StrToUint32(String("9")), Int(9)),
-            #         is_valid=True,
-            #         is_sat=True,
-            #         logic=pysmt.logics.QF_SLIA),
-
-            # Example(expr=Equals(Uint16ToStr(Int(9)), String("9")),
-            #         is_valid=True,
-            #         is_sat=True,
-            #         logic=pysmt.logics.QF_SLIA),
-
-            # Example(expr=Equals(Uint32ToStr(Int(9)), String("9")),
-            #         is_valid=True,
-            #         is_sat=True,
-            #         logic=pysmt.logics.QF_SLIA),
-
             # Test complex names
             Example(expr=And(Symbol("Did you know that any string works? #yolo"),
                              Symbol("10"),

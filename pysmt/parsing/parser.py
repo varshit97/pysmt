@@ -123,10 +123,6 @@ class HRLexer(Lexer):
             Rule(r"(str\.suffixof)", FunctionCallAdapter(self.mgr.StrSuffixOf, 100), False), # str_suffixof
             Rule(r"(str\.to\.int)", FunctionCallAdapter(self.mgr.StrToInt, 100), False), # str_to_int
             Rule(r"(int\.to\.str)", FunctionCallAdapter(self.mgr.IntToStr, 100), False), # int_to_str
-            Rule(r"(str\.to\.uint16)", FunctionCallAdapter(self.mgr.StrToUint16, 100), False), # str_to_uint16
-            Rule(r"(uint16\.to\.str)", FunctionCallAdapter(self.mgr.Uint16ToStr, 100), False), # uint16_to_str
-            Rule(r"(str\.to\.uint32)", FunctionCallAdapter(self.mgr.StrToUint32, 100), False), # str_to_uint32
-            Rule(r"(uint32\.to\.str)", FunctionCallAdapter(self.mgr.Uint32ToStr, 100), False), # uint32_to_str
 
             Rule(r"'(.*?)'", self.identifier, True), # quoted identifiers
             Rule(r"([A-Za-z_][A-Za-z0-9_]*)", self.identifier, True),# identifiers
