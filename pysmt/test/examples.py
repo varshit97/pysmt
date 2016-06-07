@@ -34,11 +34,14 @@ from pysmt.shortcuts import (Symbol, Function,
                              BVLShl, BVLShr,BVRol, BVRor,
                              BVZExt, BVSExt, BVSub, BVComp, BVAShr, BVSLE,
                              BVSLT, BVSGT, BVSGE, BVSDiv, BVSRem,
-                             String, StrCharAt, StrConcat, StrContains, StrIndexOf,
-                             StrLength, StrPrefixOf, StrReplace, StrSubstr, StrSuffixOf, StrToInt,
-                             IntToStr)
+                             String, StrCharAt, StrConcat, StrContains,
+                             StrIndexOf, StrLength, StrPrefixOf, StrReplace,
+                             StrSubstr, StrSuffixOf, StrToInt,
+                             IntToStr,
+                             Store, Select, Array)
 
 from pysmt.typing import REAL, BOOL, INT, FunctionType, BV8, BV16, STRING
+from pysmt.typing import FunctionType, ArrayType, ARRAY_INT_INT
 
 
 Example = namedtuple('Example',
@@ -58,6 +61,11 @@ def get_example_formulae(environment=None):
         q = Symbol("q", INT)
         r = Symbol("r", REAL)
         s = Symbol("s", REAL)
+        aii = Symbol("aii", ARRAY_INT_INT)
+        arb = Symbol("arb", ArrayType(REAL, BV8))
+        abb = Symbol("abb", ArrayType(BV8, BV8))
+        nested_a = Symbol("a_arb_aii", ArrayType(ArrayType(REAL, BV8),
+                                                 ARRAY_INT_INT))
 
         rf = Symbol("rf", FunctionType(REAL, [REAL, REAL]))
         rg = Symbol("rg", FunctionType(REAL, [REAL]))
@@ -583,6 +591,7 @@ def get_example_formulae(environment=None):
                     is_valid=False,
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
+
             # ("mystr")[1] == "y"
             Example(expr=Equals(StrCharAt(String("mystr"), Int(1)), String("y") ),
                     is_valid=True,
@@ -639,6 +648,45 @@ def get_example_formulae(environment=None):
                     logic=pysmt.logics.QF_BOOL
                 ),
 
+            # Arrays
+            # q=0 -> Store(aii, 0, 0) = Store(aii, 0, q)
+            Example(expr=Implies(Equals(q, Int(0)),
+                                 Equals(Store(aii, Int(0), Int(0)),
+                                        Store(aii, Int(0), q))),
+                    is_valid=True,
+                    is_sat=True,
+                    logic=pysmt.logics.QF_ALIA),
+
+            # Select(Store(aii, 0, 0), 0) = 0
+            Example(expr=Equals(Select(Store(aii, Int(0), Int(0)), Int(0)),
+                                Int(0)),
+                    is_valid=True,
+                    is_sat=True,
+                    logic=pysmt.logics.QF_ALIA),
+
+            # Array<Int,Int>(0)[1 := 1] = aii & aii[1] = 0
+            Example(expr=And(Equals(Array(INT, Int(0), {Int(1) : Int(1)}), aii), Equals(Select(aii, Int(1)), Int(0))),
+                    is_valid=False,
+                    is_sat=False,
+                    logic=pysmt.logics.get_logic_by_name("QF_ALIA*")),
+
+            # nested_a = Array<Array<Real,BV8>,Array<Int,Int>>(Array<Int,Int>(7))
+            #  -> Select(Select(nested_a, arb), 42) = 7
+            Example(expr=Implies(Equals(nested_a, Array(ArrayType(REAL, BV8),
+                                                        Array(INT, Int(7)))),
+                                 Equals(Select(Select(nested_a, arb), Int(42)),
+                                        Int(7))),
+                    is_valid=True,
+                    is_sat=True,
+                    logic=pysmt.logics.get_logic_by_name("QF_AUFBVLIRA*")),
+
+            # Store(Store(a, x, y), x, z) = Store(a, x, z)
+            Example(expr=Equals(Store(Store(abb, bv8, Symbol("y_", BV8)),
+                                      bv8, Symbol("z_", BV8)),
+                                Store(abb, bv8, Symbol("z_", BV8))),
+                    is_valid=True,
+                    is_sat=True,
+                    logic=pysmt.logics.QF_ABV),
         ]
         return result
 

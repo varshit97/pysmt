@@ -17,6 +17,8 @@
 #
 from functools import partial
 
+from six.moves import xrange
+
 import pysmt.operators as op
 from pysmt.environment import get_env
 from pysmt.walkers import TreeWalker, DagWalker
@@ -73,6 +75,8 @@ class SmtPrinter(TreeWalker):
         self.set_function(self.walk_bv_extend, op.BV_ZEXT)
         self.set_function(self.walk_bv_extend, op.BV_SEXT)
 
+        self.set_function(partial(self._walk_nary, "select"), op.ARRAY_SELECT)
+        self.set_function(partial(self._walk_nary, "store"), op.ARRAY_STORE)
 
     def printer(self, f):
         self.walk(f)
@@ -252,25 +256,42 @@ class SmtPrinter(TreeWalker):
         self.walk(formula.arg(0))
         self.write(")")
 
-    def walk_str_to_unit16(self,formula, **kwargs):
-        self.write("( str.to.uint16 " )
-        self.walk(formula.arg(0))
+    # def walk_str_to_unit16(self,formula, **kwargs):
+    #     self.write("( str.to.uint16 " )
+    #     self.walk(formula.arg(0))
+    #     self.write(")")
+
+    # def walk_uint16_to_str(self,formula, **kwargs):
+    #     self.write("( uint16.to.str " )
+    #     self.walk(formula.arg(0))
+    #     self.write(")")
+
+    # def walk_str_to_uint32(self,formula, **kwargs):
+    #     self.write("( str.to.uint32 " )
+    #     self.walk(formula.arg(0))
+    #     self.write(")")
+
+    # def walk_uint32_to_str(self,formula, **kwargs):
+    #     self.write("( uint32.to.str " )
+    #     self.walk(formula.arg(0))
+    #     self.write(")")
+
+    def walk_array_value(self, formula):
+        assign = formula.array_value_assigned_values_map()
+        for _ in xrange(len(assign)):
+            self.write("(store ")
+
+        self.write("((as const %s) " % formula.get_type().as_smtlib(False))
+        self.walk(formula.array_value_default())
         self.write(")")
 
-    def walk_uint16_to_str(self,formula, **kwargs):
-        self.write("( uint16.to.str " )
-        self.walk(formula.arg(0))
-        self.write(")")
+        for k in sorted(assign):
+            self.write(" ")
+            self.walk(k)
+            self.write(" ")
+            self.walk(assign[k])
+            self.write(")")
 
-    def walk_str_to_uint32(self,formula, **kwargs):
-        self.write("( str.to.uint32 " )
-        self.walk(formula.arg(0))
-        self.write(")")
-
-    def walk_uint32_to_str(self,formula, **kwargs):
-        self.write("( uint32.to.str " )
-        self.walk(formula.arg(0))
-        self.write(")")
 
 class SmtDagPrinter(DagWalker):
 
@@ -324,6 +345,9 @@ class SmtDagPrinter(DagWalker):
         self.set_function(self.walk_bv_rotate, op.BV_ROL)
         self.set_function(self.walk_bv_extend, op.BV_SEXT)
         self.set_function(self.walk_bv_extend, op.BV_ZEXT)
+
+        self.set_function(partial(self._walk_nary, "select"), op.ARRAY_SELECT)
+        self.set_function(partial(self._walk_nary, "store"), op.ARRAY_STORE)
 
 
     def _push_with_children_to_stack(self, formula, **kwargs):
@@ -531,14 +555,35 @@ class SmtDagPrinter(DagWalker):
     def walk_int_to_str(self,formula, args, **kwargs):
         return "( int.to.str %s )" % args[0]
 
-    def walk_str_to_unit16(self,formula, args, **kwargs):
-        return "( str.to.uint16 %s )" % args[0]
+    # def walk_str_to_unit16(self,formula, args, **kwargs):
+    #     return "( str.to.uint16 %s )" % args[0]
 
-    def walk_uint16_to_str(self,formula, args, **kwargs):
-        return "( uint16.to.str %s )" % args[0]
+    # def walk_uint16_to_str(self,formula, args, **kwargs):
+    #     return "( uint16.to.str %s )" % args[0]
 
-    def walk_str_to_uint32(self,formula, args, **kwargs):
-        return "( str.to.uint32 %s )" % args[0]
+    # def walk_str_to_uint32(self,formula, args, **kwargs):
+    #     return "( str.to.uint32 %s )" % args[0]
 
-    def walk_uint32_to_str(self,formula, args, **kwargs):
-        return "( uint32.to.str %s )" % args[0]
+    # def walk_uint32_to_str(self,formula, args, **kwargs):
+    #     return "( uint32.to.str %s )" % args[0]
+
+    def walk_array_value(self, formula, args, **kwargs):
+        sym = self._new_symbol()
+        self.openings += 1
+        self.write("(let ((%s " % sym)
+
+        for _ in xrange((len(args) - 1) // 2):
+            self.write("(store ")
+
+        self.write("((as const %s) " % formula.get_type().as_smtlib(False))
+        self.write(args[0])
+        self.write(")")
+
+        for i, k in enumerate(args[1::2]):
+            self.write(" ")
+            self.write(k)
+            self.write(" ")
+            self.write(args[2*i + 2])
+            self.write(")")
+        self.write("))")
+        return sym

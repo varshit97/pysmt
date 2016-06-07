@@ -24,7 +24,7 @@ these operators.
 from six.moves import xrange
 
 
-ALL_TYPES = list(xrange(0,59))
+ALL_TYPES = list(xrange(0,62))
 
 (
 FORALL, EXISTS, AND, OR, NOT, IMPLIES, IFF, # Boolean Logic (0-6)
@@ -67,6 +67,12 @@ STR_SUFFIXOF,                               # suffix (55)
 STR_TO_INT,                                 # atoi (56)
 INT_TO_STR,                                 # itoa (57)
 STR_CHARAT,                                 # Char at an index (58)
+#
+# ARRAYS
+#
+ARRAY_SELECT,                               # Array Select (59)
+ARRAY_STORE,                                # Array Store (60)
+ARRAY_VALUE                                 # Array Value (61)
 ) = ALL_TYPES
 
 QUANTIFIERS = frozenset([FORALL, EXISTS])
@@ -95,9 +101,13 @@ RELATIONS = frozenset([LE, LT, EQUALS, BV_ULE, BV_ULT, BV_SLT, BV_SLE,
                        STR_CONTAINS, STR_PREFIXOF, STR_SUFFIXOF])
 
 LIRA_OPERATORS = frozenset([PLUS, MINUS, TIMES, TOREAL])
+
+ARRAY_OPERATORS = frozenset([ARRAY_SELECT, ARRAY_STORE, ARRAY_VALUE])
+
 CUSTOM_NODE_TYPES = []
 
-THEORY_OPERATORS = LIRA_OPERATORS | BV_OPERATORS | STR_OPERATORS
+THEORY_OPERATORS = LIRA_OPERATORS | BV_OPERATORS | ARRAY_OPERATORS | STR_OPERATORS
+
 
 def new_node_type(new_node_id=None):
     """Adds a new node type to the list of custom node types and returns the ID."""
@@ -181,7 +191,11 @@ __OP_STR__ = {
     STR_SUBSTR: "STR_SUBSTR",
     STR_PREFIXOF: "STR_PREFIXOF",
     STR_SUFFIXOF: "STR_SUFFIXOF",
-    STR_TO_INT:"STRING_TO_INT",
-    INT_TO_STR:"INT_TO_STR",
-    STR_CHARAT:"STR_CHARAT"
+    STR_TO_INT: "STRING_TO_INT",
+    INT_TO_STR: "INT_TO_STR",
+    STR_CHARAT: "STR_CHARAT",
+    ARRAY_SELECT : "ARRAY_SELECT",
+    ARRAY_STORE : "ARRAY_STORE",
+    ARRAY_VALUE : "ARRAY_VALUE",
+
 }

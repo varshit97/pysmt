@@ -34,6 +34,7 @@ import pysmt.typing as types
 import pysmt.configuration as config
 import pysmt.environment
 
+
 def get_env():
     """Returns the global environment."""
     return pysmt.environment.get_env()
@@ -41,6 +42,9 @@ def get_env():
 def reset_env():
     """Resets the global environment, and returns the new one."""
     return pysmt.environment.reset_env()
+
+# Enable by default infix notation
+get_env().enable_infix_notation = True
 
 ##### Shortcuts for FormulaManager #####
 def get_type(formula):
@@ -306,7 +310,6 @@ def BVSub(left, right):
     """Returns the difference of two BV."""
     return get_env().formula_manager.BVSub(left, right)
 
-
 def BVMul(left, right):
     """Returns the product of two BV."""
     return get_env().formula_manager.BVMul(left, right)
@@ -383,8 +386,7 @@ def BVAShr(left, right):
         of steps specified by the right BV."""
     return get_env().formula_manager.BVAShr(left, right)
 
-
-# String API
+# Strings
 def StrLength(string):
     """Returns the length of a formula resulting a String"""
     return get_env().formula_manager.StrLength(string)
@@ -462,7 +464,24 @@ def IntToStr(x):
     """
     return get_env().formula_manager.IntToStr(x)
 
+# Arrays
+def Select(arr, idx):
+    """ Returns a SELECT application on array 'arr' at index 'idx' """
+    return get_env().formula_manager.Select(arr, idx)
 
+def Store(arr, idx, elem):
+    """ Returns a STORE application on array 'arr' at index 'idx' with value 'elem' """
+    return get_env().formula_manager.Store(arr, idx, elem)
+
+def Array(idx_type, default, assigned_values=None):
+    """Creates a node representing an array having index type equal to
+    idx_type, initialized with default values.
+
+    If assigned_values is specified, then it must be a map from
+    constants of type idx_type to values of the same type as default
+    and the array is initialized correspondingly.
+    """
+    return get_env().formula_manager.Array(idx_type, default, assigned_values)
 
 #### Shortcuts for Solvers Factory #####
 def Solver(quantified=False, name=None, logic=None, **kwargs):

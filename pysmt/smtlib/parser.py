@@ -24,7 +24,7 @@ from six.moves import xrange
 
 import pysmt.smtlib.commands as smtcmd
 from pysmt.environment import get_env
-from pysmt.typing import BOOL, REAL, INT, FunctionType, BVType, STRING
+from pysmt.typing import BOOL, REAL, INT, FunctionType, BVType, ArrayType, STRING
 from pysmt.logics import get_logic_by_name, UndefinedLogicError
 from pysmt.exceptions import UnknownSmtLibCommandError
 from pysmt.smtlib.script import SmtLibCommand, SmtLibScript
@@ -303,7 +303,11 @@ class SmtLibParser(object):
                             'str.suffixof':self._operator_adapter(mgr.StrSuffixOf),
                             'str.to.int':self._operator_adapter(mgr.StrToInt),
                             'int.to.str':self._operator_adapter(mgr.IntToStr),
-        }
+                            # arrays
+                            'select':self._operator_adapter(mgr.Select),
+                            'store':self._operator_adapter(mgr.Store),
+                            'as':self._enter_smtlib_as,
+                            }
 
         # Command tokens
         self.commands = {smtcmd.ASSERT : self._cmd_assert,
@@ -362,6 +366,22 @@ class SmtLibParser(object):
         else:
             assert len(args) == 2
             return mgr.Minus(args[0], args[1])
+
+
+    def _enter_smtlib_as(self, stack, tokens, key):
+        """Utility function that handles 'as' that is a special function in SMTLIB"""
+        #pylint: disable=unused-argument
+        const = self.parse_atom(tokens, "expression")
+        if const != "const":
+            raise SyntaxError("expected 'const' in expression after 'as'")
+        tyname = self.parse_type(tokens, "expression")
+        ty = self._get_basic_type(tyname)
+
+        def res(expr):
+            return self.env.formula_manager.Array(ty.index_type, expr)
+        def handler():
+            return res
+        stack[-1].append(handler)
 
 
     def _smtlib_underscore(self, *args):
@@ -450,6 +470,12 @@ class SmtLibParser(object):
         If params is specified, the type is interpreted as a function type.
         """
         if params is None or len(params) == 0:
+            if isinstance(type_name, tuple):
+                assert len(type_name) == 3
+                assert type_name[0] == "Array"
+                return ArrayType(self._get_basic_type(type_name[1]),
+                                 self._get_basic_type(type_name[2]))
+
             if type_name == "Bool":
                 return BOOL
             elif type_name == "Int":
@@ -461,6 +487,11 @@ class SmtLibParser(object):
             elif type_name.startswith("BV"):
                 size = int(type_name[2:])
                 return BVType(size)
+            else:
+                res = self.cache.get(type_name)
+                if res is not None:
+                    res = self._get_basic_type(res)
+                return res
         else:
             rt = self._get_basic_type(type_name)
             pt = [self._get_basic_type(par) for par in params]
@@ -738,6 +769,13 @@ class SmtLibParser(object):
             var = next(tokens)
         if var == "(":
             op = next(tokens)
+
+            if op == "Array":
+                idxtype = self.parse_type(tokens, command)
+                elemtype = self.parse_type(tokens, command)
+                self.consume_closing(tokens, command)
+                return ("Array", idxtype, elemtype)
+
             if op != "_":
                 raise SyntaxError("Unexpected token '%s' in %s command." % \
                                   (op, command))
@@ -969,7 +1007,15 @@ class SmtLibParser(object):
 
     def _cmd_define_sort(self, current, tokens):
         """(define-sort <fun_def>)"""
-        return self._cmd_not_implemented(current, tokens)
+        name = self.parse_atom(tokens, current)
+        self.consume_opening(tokens, current)
+        cur = next(tokens)
+        if cur != ')':
+            return self._cmd_not_implemented(current, tokens)
+        rtype = self.parse_type(tokens, current)
+        self.consume_closing(tokens, current)
+        self.cache.define(name, [], rtype)
+        return SmtLibCommand(current, [name, [], rtype])
 
     def _cmd_get_assertions(self, current, tokens):
         """(get_assertions)"""

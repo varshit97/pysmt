@@ -26,9 +26,9 @@ from six.moves import xrange
 
 import pysmt.walkers as walkers
 import pysmt.operators as op
-import pysmt.shortcuts
 
-from pysmt.typing import BOOL, REAL, INT, BVType, STRING
+from pysmt.typing import BOOL, REAL, INT, BVType, ArrayType, STRING
+
 
 
 class SimpleTypeChecker(walkers.DagWalker):
@@ -68,6 +68,10 @@ class SimpleTypeChecker(walkers.DagWalker):
                                                  op.STR_SUFFIXOF)
         self.set_function(self.walk_str_to_int, op.STR_LENGTH, op.STR_TO_INT)
         self.set_function(self.walk_int_to_str, op.INT_TO_STR)
+        # Arrays
+        self.set_function(self.walk_array_select, op.ARRAY_SELECT)
+        self.set_function(self.walk_array_store, op.ARRAY_STORE)
+
         self.be_nice = False
 
     def _get_key(self, formula, **kwargs):
@@ -206,6 +210,8 @@ class SimpleTypeChecker(walkers.DagWalker):
             return self.walk_bv_to_bool(formula, args)
         if args[0].is_string_type():
             return self.walk_type_to_type(formula, args, STRING, BOOL)
+        if args[0].is_array_type():
+            return self.walk_type_to_type(formula, args, args[0], BOOL)
         return None
 
     def walk_ite(self, formula, args, **kwargs):
@@ -319,42 +325,67 @@ class SimpleTypeChecker(walkers.DagWalker):
             return STRING
         return None
 
+    def walk_array_select(self, formula, args, **kwargs):
+        assert formula is not None
+        if None in args: return None
+        if (args[0].is_array_type() and args[0].index_type==args[1]):
+            return args[0].elem_type
+        return None
+
+    def walk_array_store(self, formula, args, **kwargs):
+        assert formula is not None
+        if None in args: return None
+        if (args[0].is_array_type() and args[0].index_type==args[1] and
+            args[0].elem_type==args[2]):
+            return args[0]
+        return None
+
+    def walk_array_value(self, formula, args, **kwargs):
+        assert formula is not None
+        if None in args: return None
+
+        default_type = args[0]
+        idx_type = formula.array_value_index_type()
+        for i, c in enumerate(args[1:]):
+            if i % 2 == 0 and c != idx_type:
+                return None # Wrong index type
+            elif i % 2 == 1 and c != default_type:
+                return None
+        return ArrayType(idx_type, default_type)
+
+
 # EOC SimpleTypeChecker
 
 
 def assert_no_boolean_in_args(args):
     """ Enforces that the elements in args are not of BOOL type."""
-    get_type = pysmt.shortcuts.get_type
     for arg in args:
-        if (get_type(arg) == BOOL):
+        if (arg.get_type() == BOOL):
             raise TypeError("Boolean Expressions are not allowed in arguments")
 
 
 def assert_boolean_args(args):
     """ Enforces that the elements in args are of BOOL type. """
-    get_type = pysmt.shortcuts.get_type
     for arg in args:
-        t = get_type(arg)
+        t = arg.get_type()
         if (t != BOOL):
             raise TypeError("%s is not allowed in arguments" % t)
 
 
 def assert_same_type_args(args):
     """ Enforces that all elements in args have the same type. """
-    get_type = pysmt.shortcuts.get_type
-    ref_t = get_type(args[0])
+    ref_t = args[0].get_type()
     for arg in args[1:]:
-        t = get_type(arg)
+        t = arg.get_type()
         if (t != ref_t):
             raise TypeError("Arguments should be of the same type!\n" +
-                             str([str((a, get_type(a))) for a in args]))
+                             str([str((a, a.get_type())) for a in args]))
 
 
 def assert_args_type_in(args, allowed_types):
     """ Enforces that the type of the arguments is an allowed type """
-    get_type = pysmt.shortcuts.get_type
     for arg in args:
-        t = get_type(arg)
+        t = arg.get_type()
         if (t not in allowed_types):
             raise TypeError(
                 "Argument is of type %s, but one of %s was expected!\n" %

@@ -185,6 +185,8 @@ class TestBasic(TestCase):
             except SolverReturnedUnknownResultError:
                 # CVC4 does not handle quantifiers in a complete way
                 self.assertFalse(logic.quantifier_free)
+            except NoSolverAvailableError as ex:
+                pass
 
     @skipIfSolverNotAvailable("yices")
     def test_examples_yices(self):
@@ -198,7 +200,7 @@ class TestBasic(TestCase):
             except NoSolverAvailableError:
                 # Trying to solve a logic that the solver does not support
                 theory = logic.theory
-                assert theory.strings
+                assert theory.strings or theory.arrays
 
     @skipIfSolverNotAvailable("btor")
     def test_examples_btor(self):
@@ -285,21 +287,32 @@ class TestBasic(TestCase):
     def test_examples_by_logic(self):
         for (f, validity, satisfiability, logic) in get_example_formulae():
             if len(get_env().factory.all_solvers(logic=logic)) > 0:
-                v = is_valid(f, logic=logic)
-                s = is_sat(f, logic=logic)
-                self.assertEqual(validity, v, f.serialize())
-                self.assertEqual(satisfiability, s, f.serialize())
-
+                try:
+                    v = is_valid(f, logic=logic)
+                    s = is_sat(f, logic=logic)
+                    self.assertEqual(validity, v, f.serialize())
+                    self.assertEqual(satisfiability, s, f.serialize())
+                except SolverReturnedUnknownResultError:
+                    s = Solver(logic=logic)
+                    print(s, logic, f)
+                    self.assertFalse(logic.quantifier_free,
+                                     "Unkown result are accepted only on "\
+                                     "Quantified formulae")
 
     def test_examples_get_implicant(self):
         for (f, _, satisfiability, logic) in get_example_formulae():
             if logic.quantifier_free:
                 for sname in get_env().factory.all_solvers(logic=logic):
-                    f_i = get_implicant(f, logic=logic, solver_name=sname)
-                    if satisfiability and f_i is not None:
-                        self.assertValid(Implies(f_i, f), logic=logic, msg=f)
-                    else:
-                        self.assertIsNone(f_i)
+                    try:
+                        f_i = get_implicant(f, logic=logic, solver_name=sname)
+                        if satisfiability:
+                            self.assertValid(Implies(f_i, f), logic=logic, msg=f)
+                        else:
+                            self.assertIsNone(f_i)
+                    except ConvertExpressionError as ex:
+                        # Some solvers do not support ARRAY_VALUE
+                        self.assertEqual(ex.expression.node_type(), op.ARRAY_VALUE)
+                        self.assertTrue(sname in ["cvc4", "btor"])
 
     def test_solving_under_assumption(self):
         v1, v2 = [FreshSymbol() for _ in xrange(2)]

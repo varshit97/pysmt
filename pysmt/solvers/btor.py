@@ -35,7 +35,7 @@ from pysmt.exceptions import (SolverReturnedUnknownResultError,
                               SolverStatusError,
                               ConvertExpressionError)
 from pysmt.decorators import clear_pending_pop, catch_conversion_error
-from pysmt.logics import QF_BV, QF_UFBV
+from pysmt.logics import QF_BV, QF_UFBV, QF_ABV, QF_AUFBV, QF_AX
 from pysmt.oracles import get_logic
 
 
@@ -43,7 +43,7 @@ from pysmt.oracles import get_logic
 class BoolectorSolver(IncrementalTrackingSolver,
                       SmtLibBasicSolver, SmtLibIgnoreMixin):
 
-    LOGICS = [QF_BV, QF_UFBV]
+    LOGICS = [QF_BV, QF_UFBV, QF_ABV, QF_AUFBV, QF_AX]
 
     def __init__(self, environment, logic, **options):
         IncrementalTrackingSolver.__init__(self,
@@ -125,6 +125,9 @@ class BoolectorSolver(IncrementalTrackingSolver,
         titem = self.converter.convert(item)
         if item.is_symbol() and item.symbol_type().is_bv_type():
             return self.mgr.BV(titem.assignment, item.bv_width())
+        elif item.is_symbol() and item.symbol_type().is_array_type():
+            # Array constant without a base value
+            return None
         else:
             return self.mgr.Bool(bool(int(titem.assignment)))
 
@@ -186,6 +189,14 @@ class BTORConverter(Converter, DagWalker):
             raise ConvertExpressionError
         elif symbol_type.is_int_type():
             raise ConvertExpressionError
+        elif symbol_type.is_array_type():
+            # BTOR supports only Arrays of Type (BV, BV)
+            index_type = symbol_type.index_type
+            elem_type = symbol_type.elem_type
+            if not (index_type.is_bv_type() and elem_type.is_bv_type()):
+                raise ConvertExpressionError("BTOR supports only Array(BV,BV). "\
+                                             "Type '%s' was given." % str(symbol_type))
+            res = self._btor.Array(elem_type.width, index_type.width)
         else:
             assert symbol_type.is_bv_type()
             res = self._btor.Var(formula.bv_width(),
@@ -206,6 +217,7 @@ class BTORConverter(Converter, DagWalker):
         return self._btor.Const(formula.constant_value())
 
     def walk_equals(self, formula, args, **kwargs):
+        args = self._extend_bv_equal_width(*args)
         return self._btor.Eq(*args)
 
     def walk_function(self, formula, args, **kwargs):
@@ -262,42 +274,48 @@ class BTORConverter(Converter, DagWalker):
         return self._btor.Urem(args[0], args[1])
 
     def walk_bv_lshl(self, formula, args, **kwargs):
-        # Boolector requires that witdh(rhs) = log2(width(lhs))
-        lhs_w = args[0].width
-        rhs_w = args[1].width
-        target_w = int(ceil(log(lhs_w, 2)))
+        # LHS width must be a power of 2
+        # Since this is a Logical Shift, we can Zero-Extend LHS
+        # if this is not the case
+        lhs, rhs = self._extend_bv_pow2(args[0]), args[1]
+        lhs_w, rhs_w = lhs.width, rhs.width
 
+        # Boolector requires that witdh(rhs) = log2(width(lhs))
+        target_w = int(ceil(log(lhs_w, 2)))
         if rhs_w == target_w:
-            return args[0] << args[1]
+            return lhs << args[1]
         else:
             # IF (rhs <= max) Then Rescale Else Max
             max_value = 2**target_w-1
             max_big = self._btor.Const(max_value, rhs_w)
-            cond = self._btor.Ulte(args[1], max_big)
+            cond = self._btor.Ulte(rhs, max_big)
             max_small = self._btor.Const(max_value, target_w)
-            rescaled = self._btor.Slice(args[1], target_w-1, 0)
-            return args[0] << self._btor.Cond(cond,
+            rescaled = self._btor.Slice(rhs, target_w-1, 0)
+            return lhs << self._btor.Cond(cond,
                                               rescaled,
                                               max_small)
 
     def walk_bv_lshr(self, formula, args, **kwargs):
-        # Boolector requires that witdh(rhs) = log2(width(lhs))
-        lhs_w = args[0].width
-        rhs_w = args[1].width
+        # LHS width must be a power of 2
+        # Since this is a Logical Shift, we can Zero-Extend LHS
+        # if this is not the case
+        lhs, rhs = self._extend_bv_pow2(args[0]), args[1]
+        lhs_w, rhs_w = lhs.width, rhs.width
         target_w = int(ceil(log(lhs_w, 2)))
 
+        # Boolector requires that width(rhs) = log2(width(lhs))
         if rhs_w == target_w:
-            return args[0] >> args[1]
+            return lhs >> rhs
         else:
             # IF (rhs <= max) Then Rescale Else Max
             max_value = 2**target_w-1
             max_big = self._btor.Const(max_value, rhs_w)
-            cond = self._btor.Ulte(args[1], max_big)
+            cond = self._btor.Ulte(rhs, max_big)
             max_small = self._btor.Const(max_value, target_w)
-            rescaled = self._btor.Slice(args[1], target_w-1, 0)
-            return args[0] >> self._btor.Cond(cond,
-                                              rescaled,
-                                              max_small)
+            rescaled = self._btor.Slice(rhs, target_w-1, 0)
+            return lhs >> self._btor.Cond(cond,
+                                          rescaled,
+                                          max_small)
 
     def walk_bv_rol(self, formula, args, **kwargs):
         return self._btor.Rol(args[0],
@@ -310,42 +328,54 @@ class BTORConverter(Converter, DagWalker):
     def walk_bv_zext(self, formula, args, **kwargs):
         return self._btor.Uext(args[0], formula.bv_extend_step())
 
-    def walk_bv_sext (self, formula, args, **kwargs):
+    def walk_bv_sext(self, formula, args, **kwargs):
         return self._btor.Sext(args[0], formula.bv_extend_step())
 
     def walk_bv_slt(self, formula, args, **kwargs):
         return self._btor.Slt(args[0], args[1])
 
-    def walk_bv_sle (self, formula, args, **kwargs):
+    def walk_bv_sle(self, formula, args, **kwargs):
         return self._btor.Slte(args[0], args[1])
 
-    def walk_bv_comp (self, formula, args, **kwargs):
+    def walk_bv_comp(self, formula, args, **kwargs):
         return self._btor.Eq(args[0], args[1])
 
-    def walk_bv_sdiv (self, formula, args, **kwargs):
+    def walk_bv_sdiv(self, formula, args, **kwargs):
         return self._btor.Sdiv(args[0], args[1])
 
-    def walk_bv_srem (self, formula, args, **kwargs):
+    def walk_bv_srem(self, formula, args, **kwargs):
         return self._btor.Srem(args[0], args[1])
 
     def walk_bv_ashr (self, formula, args, **kwargs):
-        # Boolector requires that witdh(rhs) = log2(width(lhs))
-        lhs_w = args[0].width
-        rhs_w = args[1].width
-        target_w = int(ceil(log(lhs_w, 2)))
+        # LHS width must be a power of 2
+        # Since this is an Arithmetic Shift, we need to Sign-Extend LHS
+        # if this is not the case
+        lhs, rhs = self._extend_bv_pow2(args[0], signed=True), args[1]
+        lhs_w, rhs_w = lhs.width, rhs.width
 
+        # Boolector requires that witdh(rhs) = log2(width(lhs))
+        target_w = int(ceil(log(lhs_w, 2)))
         if rhs_w == target_w:
-            return self._btor.Sra(args[0], args[1])
+            return self._btor.Sra(lhs, rhs)
         else:
             # IF (rhs <= max) Then Rescale Else Max
             max_value = 2**target_w-1
             max_big = self._btor.Const(max_value, rhs_w)
-            cond = self._btor.Ulte(args[1], max_big)
+            cond = self._btor.Ulte(rhs, max_big)
             max_small = self._btor.Const(max_value, target_w)
-            rescaled = self._btor.Slice(args[1], target_w-1, 0)
-            return self._btor.Sra(args[0], self._btor.Cond(cond,
-                                                           rescaled,
-                                                           max_small))
+            rescaled = self._btor.Slice(rhs, target_w-1, 0)
+            return self._btor.Sra(lhs, self._btor.Cond(cond,
+                                                       rescaled,
+                                                       max_small))
+
+    def walk_array_store(self, formula, args, **kwargs):
+        return self._btor.Write(args[0], args[1], args[2])
+
+    def walk_array_select(self, formula, args, **kwargs):
+        return self._btor.Read(args[0], args[1])
+
+    def walk_array_value(self, formula, args, **kwargs):
+        raise ConvertExpressionError("btor does not support constant arrays")
 
     def _type_to_btor(self, tp):
         if tp.is_bool_type():
@@ -356,8 +386,34 @@ class BTORConverter(Converter, DagWalker):
             raise ConvertExpressionError
         elif tp.is_bv_type():
             return self._btor.BitVecSort(tp.width)
+        elif tp.is_array_type():
+            raise ConvertExpressionError("Unsupported Array Type")
         else:
             assert tp.is_function_type() , "Unsupported type '%s'" % tp
             stps = [self._type_to_btor(x) for x in tp.param_types]
             rtp = self._type_to_btor(tp.return_type)
             return self._btor.FunSort(stps, rtp)
+
+    def _extend_bv_pow2(self, btor_formula, signed=False):
+        """BTOR requires that many operands have width that is a power of 2"""
+        w = btor_formula.width
+        target_w = 2**int(ceil(log(w, 2)))
+        # Skip if width is ok
+        if target_w == w:
+            return btor_formula
+        if signed:
+            return self._btor.Sext(btor_formula, (target_w-w))
+        else:
+            return self._btor.Uext(btor_formula, (target_w-w))
+
+    def _extend_bv_equal_width(self, arg1, arg2):
+        if arg1.width == arg2.width:
+            return (arg1, arg2)
+        elif arg1.width > arg2.width:
+            ext = arg1.width - arg2.width
+            return (arg1,
+                    self._btor.Uext(arg2, ext))
+        elif arg1.width < arg2.width:
+            ext = arg2.width - arg1.width
+            return (self._btor.Uext(arg1, ext),
+                    arg2)

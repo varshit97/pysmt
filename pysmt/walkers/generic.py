@@ -92,6 +92,10 @@ class Walker(object):
         self.functions[op.INT_TO_STR] = self.walk_int_to_str
         self.functions[op.STR_CHARAT] = self.walk_str_charat
 
+        self.functions[op.ARRAY_SELECT] = self.walk_array_select
+        self.functions[op.ARRAY_STORE] = self.walk_array_store
+        self.functions[op.ARRAY_VALUE] = self.walk_array_value
+
         undefined_types = set(op.ALL_TYPES) - set(self.functions.keys())
         assert len(undefined_types) == 0, \
             "The following types are not defined in the generic walker: {%s}" % \
@@ -301,4 +305,13 @@ class Walker(object):
         return self.walk_error(formula, **kwargs)
 
     def walk_str_charat(self,formula, **kwargs):
+        return self.walk_error(formula, **kwargs)
+
+    def walk_array_select(self, formula, **kwargs):
+        return self.walk_error(formula, **kwargs)
+
+    def walk_array_store(self, formula, **kwargs):
+        return self.walk_error(formula, **kwargs)
+
+    def walk_array_value(self, formula, **kwargs):
         return self.walk_error(formula, **kwargs)
