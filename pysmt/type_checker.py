@@ -68,7 +68,6 @@ class SimpleTypeChecker(walkers.DagWalker):
                                                  op.STR_SUFFIXOF)
         self.set_function(self.walk_str_to_int, op.STR_LENGTH, op.STR_TO_INT)
         self.set_function(self.walk_int_to_str, op.INT_TO_STR)
-        # MG: Strings should be compacted with maps like for the other types!
         self.be_nice = False
 
     def _get_key(self, formula, **kwargs):

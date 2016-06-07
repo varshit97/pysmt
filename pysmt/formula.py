@@ -1010,7 +1010,6 @@ class FormulaManager(object):
         return self.create_node(node_type=op.STR_CHARAT, args=(s, i))
 
 
-
     def normalize(self, formula):
         """ Returns the formula normalized to the current Formula Manager.
 

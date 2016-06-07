@@ -94,9 +94,6 @@ STR_OPERATORS = frozenset([STR_CONSTANT, STR_LENGTH, STR_CONCAT, STR_CONTAINS, S
 
 # Relations are predicates on theory atoms.
 # Relations have boolean type. They are a subset of the operators for a theory
-# MG: Add STRINGS relations here
-#     E.g., StrContains is a relation (predicate) since it has a Boolean value.
-
 RELATIONS = frozenset([LE, LT, EQUALS, BV_ULE, BV_ULT, BV_SLT, BV_SLE,
                        STR_CONTAINS, STR_PREFIXOF, STR_SUFFIXOF])
 

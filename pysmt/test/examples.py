@@ -36,7 +36,8 @@ from pysmt.shortcuts import (Symbol, Function,
                              BVSLT, BVSGT, BVSGE, BVSDiv, BVSRem,
                              String, StrCharAt, StrConcat, StrContains, StrIndexOf,
                              StrLength, StrPrefixOf, StrReplace, StrSubstr, StrSuffixOf, StrToInt,
-                             IntToStr, Uint16ToStr, Uint32ToStr, StrToUint16, StrToUint32)
+                             IntToStr)
+
 from pysmt.typing import REAL, BOOL, INT, FunctionType, BV8, BV16, STRING
 
 
@@ -628,25 +629,25 @@ def get_example_formulae(environment=None):
                     is_sat=True,
                     logic=pysmt.logics.QF_SLIA),
 
-            Example(expr=Equals(StrToUint16(String("9")), Int(9)),
-                    is_valid=True,
-                    is_sat=True,
-                    logic=pysmt.logics.QF_SLIA),
+            # Example(expr=Equals(StrToUint16(String("9")), Int(9)),
+            #         is_valid=True,
+            #         is_sat=True,
+            #         logic=pysmt.logics.QF_SLIA),
 
-            Example(expr=Equals(StrToUint32(String("9")), Int(9)),
-                    is_valid=True,
-                    is_sat=True,
-                    logic=pysmt.logics.QF_SLIA),
+            # Example(expr=Equals(StrToUint32(String("9")), Int(9)),
+            #         is_valid=True,
+            #         is_sat=True,
+            #         logic=pysmt.logics.QF_SLIA),
 
-            Example(expr=Equals(Uint16ToStr(Int(9)), String("9")),
-                    is_valid=True,
-                    is_sat=True,
-                    logic=pysmt.logics.QF_SLIA),
+            # Example(expr=Equals(Uint16ToStr(Int(9)), String("9")),
+            #         is_valid=True,
+            #         is_sat=True,
+            #         logic=pysmt.logics.QF_SLIA),
 
-            Example(expr=Equals(Uint32ToStr(Int(9)), String("9")),
-                    is_valid=True,
-                    is_sat=True,
-                    logic=pysmt.logics.QF_SLIA),
+            # Example(expr=Equals(Uint32ToStr(Int(9)), String("9")),
+            #         is_valid=True,
+            #         is_sat=True,
+            #         logic=pysmt.logics.QF_SLIA),
 
             # Test complex names
             Example(expr=And(Symbol("Did you know that any string works? #yolo"),

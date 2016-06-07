@@ -21,7 +21,7 @@ from pysmt.shortcuts import (Not, Implies, Equals, Symbol, GE, GT, LT, And,
 from pysmt.shortcuts import (String, StrConcat, StrLength, StrContains,
                              StrIndexOf, StrReplace, StrSubstr,
                              StrPrefixOf, StrSuffixOf, StrToInt, IntToStr,
-                             StrToUint16, StrToUint32, StrCharAt)
+                             StrCharAt)
 from pysmt.typing import INT, STRING
 from pysmt.logics import QF_SLIA
 
@@ -120,30 +120,6 @@ class TestString(TestCase):
 
     @skipIfNoSolverForLogic(QF_SLIA)
     def test_int_to_str(self):
-        s = String("1")
-        f = Not(Equals((IntToStr(Int(1))), s))
-        self.assertUnsat(f)
-
-    @skipIfNoSolverForLogic(QF_SLIA)
-    def test_str_to_unit16(self):
-        s = String("1")
-        f = Not(Equals(StrToUint16(s), Int(1)))
-        self.assertUnsat(f)
-
-    @skipIfNoSolverForLogic(QF_SLIA)
-    def test_uint16_to_str(self):
-        s = String("1")
-        f = Not(Equals((IntToStr(Int(1))), s))
-        self.assertUnsat(f)
-
-    @skipIfNoSolverForLogic(QF_SLIA)
-    def test_str_to_uint32(self):
-        s = String("1")
-        f = Not(Equals(StrToUint32(s), Int(1)))
-        self.assertUnsat(f)
-
-    @skipIfNoSolverForLogic(QF_SLIA)
-    def test_uint32_to_str(self):
         s = String("1")
         f = Not(Equals((IntToStr(Int(1))), s))
         self.assertUnsat(f)
