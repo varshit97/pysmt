@@ -172,7 +172,6 @@ class Solver(object):
         """
         raise NotImplementedError
 
-
     def solve(self, assumptions=None):
         """Returns the satisfiability value of the asserted formulas.
 

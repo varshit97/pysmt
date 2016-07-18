@@ -429,13 +429,15 @@ def Interpolator(name=None, logic=None):
     """Returns an interpolator"""
     return get_env().factory.Interpolator(name=name, logic=logic)
 
-def is_sat(formula, solver_name=None, logic=None):
+def is_sat(formula, solver_name=None, logic=None, portfolio=None):
     """ Returns whether a formula is satisfiable.
 
     :param formula: The formula to check satisfiability
     :type  formula: FNode
     :param solver_name: Specify the name of the solver to be used.
     :param logic: Specify the logic that is going to be used.
+    :param portfolio: A list of solver names to perform portfolio solving.
+    :type  portfolio: An iterable of strings
     :returns: Whether the formula is SAT or UNSAT.
     :rtype: bool
     """
@@ -446,7 +448,8 @@ def is_sat(formula, solver_name=None, logic=None):
 
     return env.factory.is_sat(formula,
                               solver_name=solver_name,
-                              logic=logic)
+                              logic=logic,
+                              portfolio=portfolio)
 
 def get_model(formula, solver_name=None, logic=None):
     """ Similar to :py:func:`is_sat` but returns a model if the formula is
@@ -489,7 +492,7 @@ def get_unsat_core(clauses, solver_name=None, logic=None):
                                       solver_name=solver_name,
                                       logic=logic)
 
-def is_valid(formula, solver_name=None, logic=None):
+def is_valid(formula, solver_name=None, logic=None, portfolio=None):
     """Similar to :py:func:`is_sat` but checks validity."""
     env = get_env()
     if formula not in env.formula_manager:
@@ -498,9 +501,10 @@ def is_valid(formula, solver_name=None, logic=None):
 
     return env.factory.is_valid(formula,
                                 solver_name=solver_name,
-                                logic=logic)
+                                logic=logic,
+                                portfolio=portfolio)
 
-def is_unsat(formula, solver_name=None, logic=None):
+def is_unsat(formula, solver_name=None, logic=None, portfolio=None):
     """Similar to :py:func:`is_sat` but checks unsatisfiability."""
     env = get_env()
     if formula not in env.formula_manager:
@@ -509,7 +513,8 @@ def is_unsat(formula, solver_name=None, logic=None):
 
     return env.factory.is_unsat(formula,
                                 solver_name=solver_name,
-                                logic=logic)
+                                logic=logic,
+                                portfolio=portfolio)
 
 def qelim(formula, solver_name=None, logic=None):
     """Performs quantifier elimination of the given formula."""
