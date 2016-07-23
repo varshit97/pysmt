@@ -653,7 +653,10 @@ class Simplifier(pysmt.walkers.DagWalker):
     def walk_str_replace(self, formula, args, **kwargs):
         s, t1, t2 = args
         if s.is_string_constant() and t1.is_string_constant() and t2.is_string_constant():
-            return self.manager.String(s.constant_value().replace(t1.constant_value(), t2.constant_value()))
+            t1_str = t1.constant_value()
+            t2_str = t2.constant_value()
+            s_str = s.constant_value()
+            return self.manager.String(s_str.replace(t1_str, t2_str, 1))
         return self.manager.StrReplace(s, t1, t2)
 
     def walk_str_substr(self, formula, args, **kwargs):
@@ -680,12 +683,17 @@ class Simplifier(pysmt.walkers.DagWalker):
     def walk_str_to_int(self, formula, args, **kwargs):
         s = args[0]
         if s.is_string_constant():
-            return self.manager.Int(int(s.constant_value()))
+            try:
+                return self.manager.Int(int(s.constant_value()))
+            except ValueError:
+                return self.manager.Int(-1)
         return self.manager.StrToInt(s)
 
     def walk_int_to_str(self, formula, args, **kwargs):
         i = args[0]
         if i.is_int_constant():
+            if i.constant_value() < 0:
+                return self.manager.String("")
             return self.manager.String(str(i.constant_value()))
         return self.manager.IntToStr(i)
 

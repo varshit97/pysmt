@@ -571,6 +571,9 @@ def get_example_formulae(environment=None):
                     is_sat=False,
                     logic=pysmt.logics.QF_UFLIRA
                 ),
+            #
+            # STR
+            #
 
             # ("mystr" == str1)
             Example(expr=Equals(String("mystr"), str1),
