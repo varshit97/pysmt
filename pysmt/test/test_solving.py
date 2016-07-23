@@ -162,62 +162,60 @@ class TestBasic(TestCase):
     def test_examples_msat(self):
         for (f, validity, satisfiability, logic) in get_example_formulae():
             if not logic.quantifier_free: continue
-            try:
-                v = is_valid(f, solver_name='msat', logic=logic)
-                s = is_sat(f, solver_name='msat', logic=logic)
-                self.assertEqual(validity, v, f)
-                self.assertEqual(satisfiability, s, f)
-            except NoSolverAvailableError:
-                # Trying to solve a logic that the solver does not support
-                theory = logic.theory
-                assert theory.strings
+            if not logic.theory.linear: continue
+            if logic.theory.strings: continue
+
+            v = is_valid(f, solver_name='msat', logic=logic)
+            s = is_sat(f, solver_name='msat', logic=logic)
+            self.assertEqual(validity, v, f)
+            self.assertEqual(satisfiability, s, f)
 
     @skipIfSolverNotAvailable("cvc4")
     def test_examples_cvc4(self):
         for (f, validity, satisfiability, logic) in get_example_formulae():
-            if not logic.quantifier_free: continue
-            try:
+            if not logic.theory.linear: continue
+            if logic.theory.arrays_const: continue
+            if not logic.quantifier_free:
+                try:
+                    v = is_valid(f, solver_name='cvc4', logic=logic)
+                    s = is_sat(f, solver_name='cvc4', logic=logic)
+                    self.assertEqual(validity, v, f)
+                    self.assertEqual(satisfiability, s, f)
+                except SolverReturnedUnknownResultError:
+                    # CVC4 does not handle quantifiers in a complete way
+                    pass
+            else:
                 v = is_valid(f, solver_name='cvc4', logic=logic)
                 s = is_sat(f, solver_name='cvc4', logic=logic)
                 self.assertEqual(validity, v, f)
                 self.assertEqual(satisfiability, s, f)
 
-            except SolverReturnedUnknownResultError:
-                # CVC4 does not handle quantifiers in a complete way
-                self.assertFalse(logic.quantifier_free)
-            except NoSolverAvailableError as ex:
-                pass
 
     @skipIfSolverNotAvailable("yices")
     def test_examples_yices(self):
         for (f, validity, satisfiability, logic) in get_example_formulae():
             if not logic.quantifier_free: continue
-            try:
-                v = is_valid(f, solver_name='yices', logic=logic)
-                s = is_sat(f, solver_name='yices', logic=logic)
-                self.assertEqual(validity, v, f)
-                self.assertEqual(satisfiability, s, f)
-            except NoSolverAvailableError:
-                # Trying to solve a logic that the solver does not support
-                theory = logic.theory
-                assert theory.strings or theory.arrays
+            if not logic.theory.linear: continue
+            if logic.theory.strings: continue
+            if logic.theory.arrays: continue
+
+            v = is_valid(f, solver_name='yices', logic=logic)
+            s = is_sat(f, solver_name='yices', logic=logic)
+            self.assertEqual(validity, v, f)
+            self.assertEqual(satisfiability, s, f)
 
     @skipIfSolverNotAvailable("btor")
     def test_examples_btor(self):
         for (f, validity, satisfiability, logic) in get_example_formulae():
             if not logic.quantifier_free: continue
-            try:
-                v = is_valid(f, solver_name='btor', logic=logic)
-                s = is_sat(f, solver_name='btor', logic=logic)
-                self.assertEqual(validity, v, f)
-                self.assertEqual(satisfiability, s, f)
-            except NoSolverAvailableError:
-                # Trying to solve a logic that the solver does not support
-                theory = logic.theory
-                assert theory.strings or \
-                    theory.integer_arithmetic or \
-                    theory.real_arithmetic
+            if logic.theory.strings: continue
+            if logic.theory.integer_arithmetic: continue
+            if logic.theory.real_arithmetic: continue
 
+            v = is_valid(f, solver_name='btor', logic=logic)
+            s = is_sat(f, solver_name='btor', logic=logic)
+            self.assertEqual(validity, v, f)
+            self.assertEqual(satisfiability, s, f)
 
     def do_model(self, solver_name):
         for (f, _, satisfiability, logic) in get_example_formulae():

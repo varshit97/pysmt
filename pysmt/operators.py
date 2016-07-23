@@ -24,7 +24,7 @@ these operators.
 from six.moves import xrange
 
 
-ALL_TYPES = list(xrange(0,62))
+ALL_TYPES = list(xrange(0,65))
 
 (
 FORALL, EXISTS, AND, OR, NOT, IMPLIES, IFF, # Boolean Logic (0-6)
@@ -72,7 +72,11 @@ STR_CHARAT,                                 # Char at an index (58)
 #
 ARRAY_SELECT,                               # Array Select (59)
 ARRAY_STORE,                                # Array Store (60)
-ARRAY_VALUE                                 # Array Value (61)
+ARRAY_VALUE,                                # Array Value (61)
+
+DIV,                                        # Arithmetic Division (62)
+POW,                                        # Arithmetic Power (63)
+ALGEBRAIC_CONSTANT,                         # Algebraic Number (64)
 ) = ALL_TYPES
 
 QUANTIFIERS = frozenset([FORALL, EXISTS])
@@ -82,7 +86,12 @@ BOOL_CONNECTIVES = frozenset([AND, OR, NOT, IMPLIES, IFF])
 BOOL_OPERATORS = frozenset(QUANTIFIERS | BOOL_CONNECTIVES)
 
 CONSTANTS = frozenset([REAL_CONSTANT, BOOL_CONSTANT, INT_CONSTANT,
-                       BV_CONSTANT, STR_CONSTANT])
+                       BV_CONSTANT, STR_CONSTANT, ALGEBRAIC_CONSTANT])
+
+# Relations are predicates on theory atoms.
+# Relations have boolean type. They are a subset of the operators for a theory
+RELATIONS = frozenset([LE, LT, EQUALS, BV_ULE, BV_ULT, BV_SLT, BV_SLE,
+                       STR_CONTAINS, STR_PREFIXOF, STR_SUFFIXOF])
 
 BV_OPERATORS = frozenset([BV_CONSTANT, BV_NOT, BV_AND, BV_OR, BV_XOR,
                           BV_CONCAT, BV_EXTRACT, BV_ULT, BV_ULE, BV_NEG, BV_ADD,
@@ -95,19 +104,13 @@ STR_OPERATORS = frozenset([STR_CONSTANT, STR_LENGTH, STR_CONCAT, STR_CONTAINS,
                            STR_SUBSTR, STR_PREFIXOF, STR_SUFFIXOF, STR_CHARAT,
                            STR_TO_INT, INT_TO_STR,])
 
-# Relations are predicates on theory atoms.
-# Relations have boolean type. They are a subset of the operators for a theory
-RELATIONS = frozenset([LE, LT, EQUALS, BV_ULE, BV_ULT, BV_SLT, BV_SLE,
-                       STR_CONTAINS, STR_PREFIXOF, STR_SUFFIXOF])
-
-LIRA_OPERATORS = frozenset([PLUS, MINUS, TIMES, TOREAL])
+IRA_OPERATORS = frozenset([PLUS, MINUS, TIMES, TOREAL, DIV, POW])
 
 ARRAY_OPERATORS = frozenset([ARRAY_SELECT, ARRAY_STORE, ARRAY_VALUE])
 
 CUSTOM_NODE_TYPES = []
 
-THEORY_OPERATORS = LIRA_OPERATORS | BV_OPERATORS | ARRAY_OPERATORS | STR_OPERATORS
-
+THEORY_OPERATORS = IRA_OPERATORS | BV_OPERATORS | ARRAY_OPERATORS | STR_OPERATORS
 
 def new_node_type(new_node_id=None):
     """Adds a new node type to the list of custom node types and returns the ID."""
@@ -197,5 +200,7 @@ __OP_STR__ = {
     ARRAY_SELECT : "ARRAY_SELECT",
     ARRAY_STORE : "ARRAY_STORE",
     ARRAY_VALUE : "ARRAY_VALUE",
-
+    DIV: "DIV",
+    POW: "POW",
+    ALGEBRAIC_CONSTANT: "ALGEBRAIC_CONSTANT",
 }

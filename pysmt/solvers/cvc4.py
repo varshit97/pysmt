@@ -30,7 +30,9 @@ import pysmt.typing as types
 from pysmt.logics import PYSMT_LOGICS, ARRAYS_CONST_LOGICS, QF_SLIA
 
 from pysmt.solvers.solver import Solver, Converter
-from pysmt.exceptions import SolverReturnedUnknownResultError, InternalSolverError
+from pysmt.exceptions import (SolverReturnedUnknownResultError,
+                              InternalSolverError,
+                              NonLinearError)
 from pysmt.walkers import DagWalker
 from pysmt.solvers.smtlib import SmtLibBasicSolver, SmtLibIgnoreMixin
 from pysmt.solvers.eager import EagerModel
@@ -39,7 +41,8 @@ from pysmt.decorators import catch_conversion_error
 
 class CVC4Solver(Solver, SmtLibBasicSolver, SmtLibIgnoreMixin):
 
-    LOGICS = ( PYSMT_LOGICS | frozenset([QF_SLIA]) ) - ARRAYS_CONST_LOGICS
+    LOGICS = ( PYSMT_LOGICS | frozenset([QF_SLIA]) ) - ARRAYS_CONST_LOGICS -\
+             set(l for l in PYSMT_LOGICS if not l.theory.linear)
 
     def __init__(self, environment, logic, **options):
         Solver.__init__(self,
@@ -304,6 +307,8 @@ class CVC4Converter(Converter, DagWalker):
         return self.mkExpr(CVC4.EQUAL, args[0], args[1])
 
     def walk_times(self, formula, args, **kwargs):
+        if not args[0].isConst() and not args[1].isConst():
+            raise NonLinearError(formula)
         return self.mkExpr(CVC4.MULT, args[0], args[1])
 
     def walk_toreal(self, formula, args, **kwargs):

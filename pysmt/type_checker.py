@@ -22,8 +22,6 @@ reasoning about the type of formulae.
  * The functions assert_*_args are useful for testing the type of
    arguments of a given function.
 """
-from six.moves import xrange
-
 import pysmt.walkers as walkers
 import pysmt.operators as op
 
@@ -41,11 +39,12 @@ class SimpleTypeChecker(walkers.DagWalker):
         self.set_function(self.walk_symbol, op.SYMBOL)
         self.set_function(self.walk_math_relation, op.EQUALS, op.LE, op.LT)
         self.set_function(self.walk_identity_real, op.REAL_CONSTANT)
+        self.set_function(self.walk_identity_real, op.ALGEBRAIC_CONSTANT)
         self.set_function(self.walk_identity_bool, op.BOOL_CONSTANT)
         self.set_function(self.walk_identity_int, op.INT_CONSTANT)
         self.set_function(self.walk_quantifier, op.FORALL, op.EXISTS)
         self.set_function(self.walk_realint_to_realint, op.PLUS, op.MINUS,
-                          op.TIMES)
+                          op.TIMES, op.DIV)
         self.set_function(self.walk_ite, op.ITE)
         self.set_function(self.walk_int_to_real, op.TOREAL)
         self.set_function(self.walk_function, op.FUNCTION)
@@ -273,8 +272,8 @@ class SimpleTypeChecker(walkers.DagWalker):
         if len(args) != len(tp.param_types):
             return None
 
-        for i in xrange(len(args)):
-            if args[i] != tp.param_types[i]:
+        for (arg, p_type) in zip(args, tp.param_types):
+            if arg != p_type:
                 return None
 
         return tp.return_type
@@ -353,6 +352,13 @@ class SimpleTypeChecker(walkers.DagWalker):
                 return None
         return ArrayType(idx_type, default_type)
 
+    def walk_pow(self, formula, args, **kwargs):
+        if args[0] != args[1]:
+            return None
+        # Exponent must be positive for INT
+        if args[0].is_int_type() and formula.arg(1).constant_value() < 0 :
+            return None
+        return args[0]
 
 # EOC SimpleTypeChecker
 
