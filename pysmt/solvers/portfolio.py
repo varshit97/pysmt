@@ -26,13 +26,15 @@ LOGGER = logging.getLogger(__name__)
 _debug = LOGGER.debug
 
 class PortfolioOptions(SolverOptions):
-    pass
+
+    VALID_OPTIONS = SolverOptions.VALID_OPTIONS +\
+                    [("exit_on_exception", False)]
 
 
 class Portfolio(IncrementalTrackingSolver):
     """Create a portfolio instance of multiple Solvers."""
 
-    OptionClass = PortfolioOptions
+    OptionsClass = PortfolioOptions
 
     def __init__(self, solvers_set, environment, logic, **options):
         """Creates a portfolio using the specified solvers.
@@ -108,7 +110,20 @@ class Portfolio(IncrementalTrackingSolver):
             processes.append(_p)
             _p.start()
             _debug("Started instance of %s", sname)
-        (sname, res) = signaling_queue.get(block=True)
+
+        while True:
+            (sname, res) = signaling_queue.get(block=True)
+            if isinstance(res, BaseException):
+                if self.options.exit_on_exception:
+                    # Close all solvers and raise exception
+                    for p in processes:
+                        p.terminate()
+                    raise res
+                else:
+                    continue
+            else:
+                assert type(res) is bool, type(res)
+                break
         _debug("Solver %s finished first saying %s", sname, res)
 
         # Kill all processes, except for the "winner"
@@ -174,7 +189,12 @@ def _run_solver(solver, options, formula, signaling_queue, ctrl_pipe):
     Solver = get_env().factory.Solver
     with Solver(name=solver) as s:
         s.add_assertion(formula)
-        local_res = s.solve()
+        try:
+            local_res = s.solve()
+        except Exception as ex:
+            signaling_queue.put((solver, ex))
+            return
+
         signaling_queue.put((solver, local_res))
         _exit = False
         while not _exit:
@@ -192,6 +212,7 @@ def _run_solver(solver, options, formula, signaling_queue, ctrl_pipe):
                 model = list(s.get_model())
                 ctrl_pipe.send(model)
             elif cmd == "get_value":
+                args = get_env().formula_manager.normalize(args)
                 ctrl_pipe.send(s.get_value(args))
             else:
                 raise ValueError("Unknown command '%s'" % cmd)

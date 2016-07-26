@@ -20,9 +20,12 @@ import os
 from pysmt.test import TestCase
 from pysmt.test import skipIfSolverNotAvailable
 from pysmt.test.examples import get_example_formulae
-from pysmt.logics import QF_LRA, QF_UFLIRA
+from pysmt.logics import QF_LRA, QF_UFLIRA, QF_BOOL
 from pysmt.solvers.portfolio import Portfolio
 from pysmt.smtlib.parser import get_formula_fname
+from pysmt.shortcuts import TRUE, Implies, Equals, Symbol, FALSE
+from pysmt.shortcuts import reset_env, is_sat
+from pysmt.typing import REAL
 
 
 class PortfolioTestCase(TestCase):
@@ -55,7 +58,6 @@ class PortfolioTestCase(TestCase):
                 self.run_smtlib(smtfile, logic, expected_result)
 
     def run_smtlib(self, smtfile, logic, expected_result):
-        from pysmt.environment import reset_env
         env = reset_env()
         formula = get_formula_fname(smtfile, env)
         with Portfolio(["cvc4", "msat", "yices"],
@@ -71,13 +73,11 @@ class PortfolioTestCase(TestCase):
     @skipIfSolverNotAvailable("cvc4")
     @skipIfSolverNotAvailable("z3")
     def test_shortcuts(self):
-        from pysmt.shortcuts import is_sat
         for (expr, _, sat_res, logic) in get_example_formulae():
             if not logic <= QF_UFLIRA: continue
             res = is_sat(expr, portfolio=["z3", "cvc4", "msat"])
             self.assertEqual(res, sat_res, expr)
 
-        from pysmt.shortcuts import TRUE
         with self.assertRaises(ValueError):
             is_sat(TRUE(), portfolio=["supersolver"])
 
@@ -86,8 +86,6 @@ class PortfolioTestCase(TestCase):
     @skipIfSolverNotAvailable("btor")
     @skipIfSolverNotAvailable("bdd")
     def test_get_value(self):
-        from pysmt.shortcuts import Implies, TRUE, Symbol
-
         with Portfolio(["msat", "picosat", "btor", "bdd"],
                        logic=QF_UFLIRA,
                        environment=self.env,
@@ -105,8 +103,6 @@ class PortfolioTestCase(TestCase):
     @skipIfSolverNotAvailable("cvc4")
     @skipIfSolverNotAvailable("yices")
     def test_incrementality(self):
-        from pysmt.shortcuts import Implies, TRUE, FALSE, Not, Symbol
-
         with Portfolio(["cvc4", "msat", "yices"],
                        logic=QF_UFLIRA,
                        environment=self.env,
@@ -127,6 +123,31 @@ class PortfolioTestCase(TestCase):
             v = s.get_value(x)
             self.assertTrue(v, FALSE())
 
+    @skipIfSolverNotAvailable("z3")
+    @skipIfSolverNotAvailable("bdd")
+    def test_exceptions(self):
+        with Portfolio(["bdd", "z3"],
+                       logic=QF_BOOL,
+                       environment=self.env,
+                       incremental=True,
+                       generate_models=True,
+                       exit_on_exception=False) as s:
+            s.add_assertion(Equals(Symbol("r", REAL), Symbol("r", REAL)))
+            res = s.solve()
+            self.assertTrue(res)
+
+            # TODO: How can we make this test more robust?
+            # It assumes that bdd will raise an error before z3.
+            # It should be so, but this is non-deterministic by nature
+            with Portfolio(["bdd", "z3"],
+                           logic=QF_BOOL,
+                           environment=self.env,
+                           incremental=True,
+                           generate_models=True,
+                           exit_on_exception=True) as s:
+                s.add_assertion(Equals(Symbol("r", REAL), Symbol("r", REAL)))
+                with self.assertRaises(Exception):
+                    s.solve()
 
 
 if __name__ == "__main__":
