@@ -30,7 +30,7 @@ from pysmt.test.examples import get_example_formulae
 from pysmt.exceptions import (SolverReturnedUnknownResultError,
                               InternalSolverError, NoSolverAvailableError,
                               ConvertExpressionError, UndefinedLogicError)
-from pysmt.logics import QF_UFLIRA, QF_BOOL, QF_LRA, AUTO
+from pysmt.logics import QF_UFLIRA, QF_BOOL, QF_LRA, AUTO, QF_BV
 from pysmt.logics import convert_logic_from_string
 
 class TestBasic(TestCase):
@@ -510,6 +510,16 @@ class TestBasic(TestCase):
         # Options are enforced at construction time
         with self.assertRaises(ValueError):
             Solver(logic=QF_BOOL, invalid_option=False)
+
+    @skipIfSolverNotAvailable("btor")
+    def test_btor_options(self):
+        for (f, _, sat, logic) in get_example_formulae():
+            if logic == QF_BV:
+                solver = Solver(name="btor", rewrite_level=0,
+                                dual_prop=1, eliminate_slices=1)
+                solver.add_assertion(f)
+                res = solver.solve()
+                self.assertTrue(res == sat)
 
 if __name__ == '__main__':
     main()

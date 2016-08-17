@@ -25,7 +25,8 @@ except ImportError:
     raise SolverAPINotFound
 
 
-from pysmt.solvers.solver import IncrementalTrackingSolver, Converter
+from pysmt.solvers.solver import (IncrementalTrackingSolver, Converter,
+                                  SolverOptions)
 from pysmt.solvers.smtlib import SmtLibBasicSolver, SmtLibIgnoreMixin
 from pysmt.solvers.eager import EagerModel
 from pysmt.walkers import DagWalker
@@ -34,11 +35,38 @@ from pysmt.exceptions import (SolverReturnedUnknownResultError,
 from pysmt.decorators import clear_pending_pop, catch_conversion_error
 from pysmt.logics import QF_BV, QF_UFBV, QF_ABV, QF_AUFBV, QF_AX
 
+class BoolectorOptions(SolverOptions):
+    """Options for Boolector:
+    * rewrite_level:
+    | Set the rewrite level (``value``: 0-3) of the rewriting engine.
+    | Boolector uses rewrite level 3 by default, rewrite levels are classified as follows:
+      * 0: no rewriting
+      * 1: term level rewriting
+      * 2: more simplification techniques
+      * 3: full rewriting/simplification
+
+    * dual_prop:
+    Enable (``value``: 1) or disable (``value``: 0) dual propagation
+    optimization.
+
+    * eliminate_slices:
+    Enable (``value``: 1) or disable (``value``: 0) slice elimination
+    on bit vector variables.
+    """
+    VALID_OPTIONS = SolverOptions.VALID_OPTIONS + \
+                    [("rewrite_level", None),  # 0-3
+                     ("dual_prop", None), # 0-1
+                     ("eliminate_slices", None), # 0-1
+                    ]
+# EOC BoolectorOptions
+
 
 class BoolectorSolver(IncrementalTrackingSolver,
                       SmtLibBasicSolver, SmtLibIgnoreMixin):
 
     LOGICS = [QF_BV, QF_UFBV, QF_ABV, QF_AUFBV, QF_AX]
+
+    OptionsClass = BoolectorOptions
 
     def __init__(self, environment, logic, **options):
         IncrementalTrackingSolver.__init__(self,
@@ -47,17 +75,33 @@ class BoolectorSolver(IncrementalTrackingSolver,
                                            **options)
 
         self.btor = boolector.Boolector()
-
-        self.btor.Set_opt("model_gen", 0)
-        # Disabling Incremental usage is not allowed.
-        # This needs to be set to 1
-        self.btor.Set_opt("incremental", 1)
-        if self.options.generate_models:
-            self.btor.Set_opt("model_gen", 1)
+        self._prepare_config(options)
         self.converter = BTORConverter(environment, self.btor)
         self.mgr = environment.formula_manager
         self.declarations = {}
         return
+
+    def _prepare_config(self, options):
+        options = self.options
+        if options.generate_models:
+            self.btor.Set_opt("model_gen", 1)
+        else:
+            self.btor.Set_opt("model_gen", 0)
+
+        # Disabling Incremental usage is not allowed.
+        # This needs to be set to 1
+        self.btor.Set_opt("incremental", 1)
+
+        if options.rewrite_level is not None:
+            self.btor.Set_opt("rewrite_level", options.rewrite_level)
+        if options.dual_prop is not None:
+            self.btor.Set_opt("dual_prop", options.dual_prop)
+        if options.eliminate_slices is not None:
+            self.btor.Set_opt("eliminate_slices", options.eliminate_slices)
+
+# EOC BoolectorOptions
+
+        pass
 
     @clear_pending_pop
     def _reset_assertions(self):

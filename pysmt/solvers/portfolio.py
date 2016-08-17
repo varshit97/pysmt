@@ -18,55 +18,66 @@
 import logging
 from multiprocessing import Process, Queue, Pipe
 
-from pysmt.solvers.solver import IncrementalTrackingSolver, SolverOptions
+from pysmt.solvers.solver import IncrementalTrackingSolver
 from pysmt.decorators import clear_pending_pop
 
 
 LOGGER = logging.getLogger(__name__)
 _debug = LOGGER.debug
 
-class PortfolioOptions(SolverOptions):
-
-    VALID_OPTIONS = SolverOptions.VALID_OPTIONS +\
-                    [("exit_on_exception", False)]
-
 
 class Portfolio(IncrementalTrackingSolver):
     """Create a portfolio instance of multiple Solvers."""
 
-    OptionsClass = PortfolioOptions
-
-    def __init__(self, solvers_set, environment, logic, **options):
+    def __init__(self, solvers_set, environment, logic,
+                 exit_on_exception=False, **options):
         """Creates a portfolio using the specified solvers.
 
-        Solver_set is an iterable of solver names. In the options it
-        is possible to specify ``solvers_options`` as a map, from a
-        name of the solver to options to be used to initialize it.
-        E.g.
-           Portfolio(["msat", "z3"],
-                     solvers_options={"msat": SolverOption(optionA="named"},
-                                      "z3": SolverOption(optionB="all"},
-                     incremental = True, ...)
+        Solver_set is an iterable. Elements of solver_set can be
+         1) a name of a solver
+         2) a tuple containing a name of a solver and dict of options
+
+        E.g.,
+           Portfolio(["msat", "z3"], incremental=True)
+              or
+           Porfolio([("msat", {"random_seed": 1}), ("msat", {"random_seed": 2})],
+                     incremental=True)
 
         Options specified in the Portfolio are share among all
-        solvers. One thread will be used for each of the solvers.
+        solvers.
+        One process will be used for each of the solvers.
         """
         IncrementalTrackingSolver.__init__(self,
                                            environment=environment,
                                            logic=logic,
                                            **options)
+        self.exit_on_exception = exit_on_exception
+        self.solvers = []
+        self._process_solver_set(solvers_set)
         # Check that the names are valid ?
         all_solvers = set(self.environment.factory.all_solvers())
-        not_found = set(solvers_set) - all_solvers
+        not_found = set(s for s,_ in self.solvers) - all_solvers
         if len(not_found) != 0:
             raise ValueError("Cannot find solvers %s" % not_found)
-
-        self.solvers = solvers_set
 
         # After Solving, we only keep the solver that finished first.
         # We can extract models from the solver, unsat cores, etc
         self._ext_solver = None # Existing solver Process
         self._ctrl_pipe = None  # Ctrl Pipe to the existing solver
+
+    def _process_solver_set(self, sset):
+        """The sset can contain both solver names and pairs name options."""
+        global_opts = self.options.as_dict()
+        for elem in sset:
+            if type(elem) is str:
+                sname = elem
+                opts = global_opts
+            else:
+                sname, local_opts = elem
+                opts = dict(global_opts)
+                for k,v in local_opts.items():
+                    opts[k] = v
+            self.solvers.append((sname, opts))
 
     def _reset_assertions(self):
         pass
@@ -99,13 +110,13 @@ class Portfolio(IncrementalTrackingSolver):
         self._ctrl_pipe = my_ctrl_pipe
 
         processes = []
-        for sname in self.solvers:
-            # TODO: Build options for this specific solver
+        for idx, (sname, opts) in enumerate(self.solvers):
             _debug("Creating instance of %s", sname)
-            options = self.options
-            _p = Process(name=sname,
+            options = opts
+            _p = Process(name="%d (%s)" % (idx, sname),
                          target=_run_solver,
-                         args=(sname, options, formula,
+                         args=("%d (%s)" % (idx, sname),
+                               sname, options, formula,
                                signaling_queue, child_ctrl_pipe))
             processes.append(_p)
             _p.start()
@@ -114,7 +125,7 @@ class Portfolio(IncrementalTrackingSolver):
         while True:
             (sname, res) = signaling_queue.get(block=True)
             if isinstance(res, BaseException):
-                if self.options.exit_on_exception:
+                if self.exit_on_exception:
                     # Close all solvers and raise exception
                     for p in processes:
                         p.terminate()
@@ -125,7 +136,6 @@ class Portfolio(IncrementalTrackingSolver):
                 assert type(res) is bool, type(res)
                 break
         _debug("Solver %s finished first saying %s", sname, res)
-
         # Kill all processes, except for the "winner"
         for p in processes:
             if p.name == sname:
@@ -175,7 +185,7 @@ class Portfolio(IncrementalTrackingSolver):
 # EOC Portfolio
 
 # Function to pass to the solver
-def _run_solver(solver, options, formula, signaling_queue, ctrl_pipe):
+def _run_solver(idx, solver, options, formula, signaling_queue, ctrl_pipe):
     """Function used by the child Process to handle Portfolio requests.
 
     solver  : name of the solver
@@ -187,7 +197,7 @@ def _run_solver(solver, options, formula, signaling_queue, ctrl_pipe):
     from pysmt.environment import get_env
 
     Solver = get_env().factory.Solver
-    with Solver(name=solver) as s:
+    with Solver(name=solver, **options) as s:
         s.add_assertion(formula)
         try:
             local_res = s.solve()
@@ -195,7 +205,7 @@ def _run_solver(solver, options, formula, signaling_queue, ctrl_pipe):
             signaling_queue.put((solver, ex))
             return
 
-        signaling_queue.put((solver, local_res))
+        signaling_queue.put((idx, local_res))
         _exit = False
         while not _exit:
             try:

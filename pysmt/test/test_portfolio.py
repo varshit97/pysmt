@@ -50,12 +50,30 @@ class PortfolioTestCase(TestCase):
     def test_smtlib(self):
         from pysmt.test.smtlib.parser_utils import SMTLIB_TEST_FILES, SMTLIB_DIR
 
-        # MG: Compare the runtime of this test when using only z3
-        #     or only msat.
         for (logic, f, expected_result) in SMTLIB_TEST_FILES:
             smtfile = os.path.join(SMTLIB_DIR, f)
             if logic <= QF_UFLIRA:
                 self.run_smtlib(smtfile, logic, expected_result)
+
+    @skipIfSolverNotAvailable("msat")
+    def test_smtlib_multi_msat(self):
+        from pysmt.test.smtlib.parser_utils import SMTLIB_TEST_FILES, SMTLIB_DIR
+
+        for (logic, f, expected_result) in SMTLIB_TEST_FILES:
+            smtfile = os.path.join(SMTLIB_DIR, f)
+            if logic <= QF_UFLIRA:
+                env = reset_env()
+                formula = get_formula_fname(smtfile, env)
+                with Portfolio([("msat", {"random_seed": 1}),
+                                ("msat", {"random_seed": 17}),
+                                ("msat", {"random_seed": 42})],
+                               logic=logic,
+                               environment=env,
+                               incremental=False,
+                               generate_models=False) as s:
+                    res = s.is_sat(formula)
+                    result = "sat" if res else "unsat"
+                    self.assertEqual(expected_result, result, smtfile)
 
     def run_smtlib(self, smtfile, logic, expected_result):
         env = reset_env()

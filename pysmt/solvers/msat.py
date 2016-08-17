@@ -32,7 +32,7 @@ from pysmt.oracles import get_logic
 import pysmt.operators as op
 from pysmt import typing as types
 from pysmt.solvers.solver import (IncrementalTrackingSolver, UnsatCoreSolver,
-                                  Model, Converter)
+                                  Model, Converter, SolverOptions)
 from pysmt.solvers.smtlib import SmtLibBasicSolver, SmtLibIgnoreMixin
 from pysmt.walkers import DagWalker
 from pysmt.exceptions import (SolverReturnedUnknownResultError,
@@ -131,12 +131,21 @@ class MathSAT5Model(Model):
         """Returns whether the model contains a value for 'x'."""
         return x in (v for v, _ in self)
 
+
+class MSatOptions(SolverOptions):
+    """Options from MathSAT Solver. """
+    VALID_OPTIONS = SolverOptions.VALID_OPTIONS +\
+                    [("random_seed", None),
+                      ("debug_file", None)]
+
+
 class MathSAT5Solver(IncrementalTrackingSolver, UnsatCoreSolver,
                      SmtLibBasicSolver, SmtLibIgnoreMixin):
 
     LOGICS = PYSMT_QF_LOGICS - set(l for l in PYSMT_QF_LOGICS if not l.theory.linear)
+    OptionsClass = MSatOptions
 
-    def __init__(self, environment, logic, debugFile=None, **options):
+    def __init__(self, environment, logic, **options):
         # TODO: DebugFile should be an option
         IncrementalTrackingSolver.__init__(self,
                                            environment=environment,
@@ -144,7 +153,7 @@ class MathSAT5Solver(IncrementalTrackingSolver, UnsatCoreSolver,
                                            **options)
 
         self.msat_config = mathsat.msat_create_default_config(str(logic))
-        self._prepare_config(self.options, debugFile)
+        self._prepare_config(self.options)
         self.msat_env = MSatEnv(self.msat_config)
         mathsat.msat_destroy_config(self.msat_config)
 
@@ -155,7 +164,7 @@ class MathSAT5Solver(IncrementalTrackingSolver, UnsatCoreSolver,
         self.mgr = environment.formula_manager
         self.converter = MSatConverter(environment, self.msat_env)
 
-    def _prepare_config(self, options, debugFile=None):
+    def _prepare_config(self, options):
         """Sets the relevant options in self.msat_config"""
         if options.generate_models:
             check = mathsat.msat_set_option(self.msat_config, "model_generation",
@@ -168,12 +177,16 @@ class MathSAT5Solver(IncrementalTrackingSolver, UnsatCoreSolver,
                                             "1")
             assert check == 0
 
-        if debugFile is not None:
+        if options.debug_file is not None:
             mathsat.msat_set_option(self.msat_config,
                                     "debug.api_call_trace", "1")
             mathsat.msat_set_option(self.msat_config,
                                     "debug.api_call_trace_filename",
                                     debugFile)
+
+        if options.random_seed is not None:
+            mathsat.msat_set_option(self.msat_config,
+                                    "random_seed", str(options.random_seed))
 
         mathsat.msat_set_option(self.msat_config,
                                 "theory.bv.div_by_zero_mode", "0")
@@ -1336,3 +1349,5 @@ class MSatBoolUFRewriter(IdentityDagWalker):
             stack = tmp
         res = stack[0]
         return res
+
+# EOC MSatBoolUFRewriter

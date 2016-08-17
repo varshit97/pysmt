@@ -39,6 +39,9 @@ class SolverOptions(object):
             if k not in [n for (n, _) in self.VALID_OPTIONS]:
                 raise ValueError("Unrecognized option '%s'" % k)
 
+    def as_dict(self):
+        return dict((name, getattr(self, name))
+                    for name, _ in self.VALID_OPTIONS)
 
 class Solver(object):
     """Represents a generic SMT Solver."""
