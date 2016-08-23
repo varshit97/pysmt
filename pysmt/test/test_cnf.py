@@ -22,24 +22,27 @@ from pysmt.shortcuts import Implies, is_sat, reset_env, Symbol, Iff
 from pysmt.rewritings import CNFizer
 from pysmt.logics import QF_BOOL, QF_LRA, QF_LIA, QF_UFLIRA
 from pysmt.test import TestCase, skipIfNoSolverForLogic, main
-from pysmt.test.examples import EXAMPLE_FORMULAS
+from pysmt.test.examples import get_example_formulae
 from pysmt.test.smtlib.parser_utils import SMTLIB_TEST_FILES, SMTLIB_DIR
 from pysmt.smtlib.parser import get_formula_fname
+from pysmt.exceptions import DeltaSATError
+
 
 class TestCnf(TestCase):
 
     def do_examples(self, logic):
         conv = CNFizer()
-        for example in EXAMPLE_FORMULAS:
+        for example in get_example_formulae():
             if example.logic != logic:
                 continue
             cnf = conv.convert_as_formula(example.expr)
-
             self.assertValid(Implies(cnf, example.expr), logic=logic)
 
-            res = is_sat(cnf, logic=logic)
-            self.assertEqual(res, example.is_sat)
-
+            try:
+                res = is_sat(cnf, logic=logic)
+                self.assertEqual(res, example.is_sat)
+            except DeltaSATError:
+                pass
 
     @skipIfNoSolverForLogic(QF_BOOL)
     def test_examples_solving_bool(self):

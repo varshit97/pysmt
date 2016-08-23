@@ -113,3 +113,7 @@ class UndefinedSymbolError(Exception):
 
     def __str__(self):
         return "'%s' is not defined!" % self.name
+
+class DeltaSATError(Exception):
+    """The problem has been shown SAT for the given delta."""
+    pass

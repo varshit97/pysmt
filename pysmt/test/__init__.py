@@ -65,18 +65,19 @@ class TestCase(unittest.TestCase):
                                                   logic=logic),
                         msg=msg)
 
+    def assertDeltaSat(self, formula, msg=None, solver_name=None, logic=None):
+        """Assert that formula is delta-SAT.
 
-@deprecated("skipIfNoSolverForLogic (be specific about expectations!)")
-def skipIfNoSolverAvailable(test_fun):
-    """Skip the test if no solver is available."""
-
-    msg = "No solver available"
-    cond = len(get_env().factory.all_solvers()) == 0
-    @unittest.skipIf(cond, msg)
-    @wraps(test_fun)
-    def wrapper(self, *args, **kwargs):
-        return test_fun(self, *args, **kwargs)
-    return wrapper
+        Note: A SAT Formula is also delta-SAT.
+        """
+        from pysmt.exceptions import DeltaSATError
+        try:
+            res = self.env.factory.is_sat(formula=formula,
+                                          solver_name=solver_name,
+                                          logic=logic),
+        except DeltaSATError:
+            res = True
+        self.assertTrue(res, msg=msg)
 
 
 class skipIfSolverNotAvailable(object):

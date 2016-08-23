@@ -33,11 +33,12 @@ addons:
     - curl
     - libboost-dev
     - python3-all-dev
+    - cmake
 
 python:
   - 2.7
   - 3.5
-  - pypy
+#  - pypy
 
 
 # Multiple envs will cause multiple build across multiple python versions.
@@ -47,17 +48,18 @@ python:
 #
 env:
   matrix:
-    - PYSMT_SOLVER="all"
-    - PYSMT_SOLVER="None"
-    - PYSMT_SOLVER="msat"
-    - PYSMT_SOLVER="z3"
-    - PYSMT_SOLVER="cvc4"
-    - PYSMT_SOLVER="yices"
-    - PYSMT_SOLVER="bdd"
-    - PYSMT_SOLVER="picosat"
-    - PYSMT_SOLVER="btor"
-    - PYSMT_SOLVER="msat_wrap"
-    - PYSMT_SOLVER="z3_wrap"
+    # - PYSMT_SOLVER="all"
+    # - PYSMT_SOLVER="None"
+    # - PYSMT_SOLVER="msat"
+    # - PYSMT_SOLVER="z3"
+    # - PYSMT_SOLVER="cvc4"
+    # - PYSMT_SOLVER="yices"
+    # - PYSMT_SOLVER="bdd"
+    # - PYSMT_SOLVER="picosat"
+    # - PYSMT_SOLVER="btor"
+    - PYSMT_SOLVER="dreal"
+    # - PYSMT_SOLVER="msat_wrap"
+    # - PYSMT_SOLVER="z3_wrap"
 
 matrix:
   fast_finish: true

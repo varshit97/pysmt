@@ -38,7 +38,7 @@ from pysmt.solvers.qelim import ShannonQuantifierEliminator
 from pysmt.solvers.solver import SolverOptions
 
 DEFAULT_SOLVER_PREFERENCE_LIST = ['msat', 'z3', 'cvc4', 'yices', 'btor',
-                                  'picosat', 'bdd']
+                                  'picosat', 'bdd', 'dreal']
 DEFAULT_QELIM_PREFERENCE_LIST = ['z3', 'msat_fm', 'msat_lw', 'bdd', 'shannon']
 DEFAULT_INTERPOLATION_PREFERENCE_LIST = ['msat', 'z3']
 DEFAULT_LOGIC = QF_UFLIRA
@@ -259,6 +259,12 @@ class Factory(object):
         try:
             from pysmt.solvers.btor import BoolectorSolver
             self._all_solvers['btor'] = BoolectorSolver
+        except SolverAPINotFound:
+            pass
+
+        try:
+            from pysmt.solvers.dreal import DRealSolver
+            self._all_solvers['dreal'] = DRealSolver
         except SolverAPINotFound:
             pass
 
