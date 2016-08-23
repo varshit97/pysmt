@@ -2,16 +2,11 @@ os: osx
 language: objective-c
 env:
   matrix:
-    - PYVERSION=python  PIP_CMD=pip  PYSMT_SOLVER="None"
-    - PYVERSION=python  PIP_CMD=pip  PYSMT_SOLVER="msat"
-    - PYVERSION=python3  PIP_CMD=pip  PYSMT_SOLVER="msat"
-    - PYVERSION=python  PIP_CMD=pip  PYSMT_SOLVER="z3"
-    - PYVERSION=python3 PIP_CMD=pip3 PYSMT_SOLVER="z3"
-
-matrix:
-  allow_failures:
-    - env: PYVERSION=python  PIP_CMD=pip  PYSMT_SOLVER="msat"
-    - env: PYVERSION=python3  PIP_CMD=pip3  PYSMT_SOLVER="msat"
+    - PYVERSION=python  PIP_CMD=pip   PYSMT_SOLVER="None"
+    - PYVERSION=python  PIP_CMD=pip   PYSMT_SOLVER="msat"
+    - PYVERSION=python3  PIP_CMD=pip3 PYSMT_SOLVER="msat"
+    - PYVERSION=python  PIP_CMD=pip   PYSMT_SOLVER="z3"
+    - PYVERSION=python3 PIP_CMD=pip3  PYSMT_SOLVER="z3"
 
 install:
   - "brew update"
