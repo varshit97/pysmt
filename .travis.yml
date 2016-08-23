@@ -48,7 +48,7 @@ python:
 #
 env:
   matrix:
-    - PYSMT_SOLVER="all"
+    - PYSMT_SOLVER="all" COVERAGE_OPT="--with-coverage --cover-package=pysmt"
     - PYSMT_SOLVER="None"
     - PYSMT_SOLVER="msat"
     - PYSMT_SOLVER="z3"
@@ -64,6 +64,8 @@ matrix:
   fast_finish: true
 
   exclude:
+    - python: 3.5
+      env: PYSMT_SOLVER="all" COVERAGE_OPT="--with-coverage --cover-package=pysmt"
     - python: pypy
       env: PYSMT_SOLVER="msat"
     - python: pypy
@@ -79,7 +81,7 @@ matrix:
     - python: pypy
       env: PYSMT_SOLVER="btor"
     - python: pypy
-      env: PYSMT_SOLVER="all"
+      env: PYSMT_SOLVER="all" COVERAGE_OPT="--with-coverage --cover-package=pysmt"
 
 install:
   # This is for btor that fails to find the python 3 library to link
@@ -101,8 +103,11 @@ install:
 script:
   - "echo ${PYTHONPATH}"
   - "python install.py --check"
-  - "nosetests pysmt -v"
+  # Coverage is enabled in the all configuration only
+  # This might miss solver specific flows, but we might work around this.
+  - "nosetests pysmt -v ${COVERAGE_OPT}"
   - if [ "${PYSMT_SOLVER}" == "all" ]; then python install.py --msat --conf --force; cp -v $(find ~/.smt_solvers/ -name mathsat -type f) /tmp/mathsat; (for ex in `ls examples/*.py`; do echo $ex; python $ex || exit $?; done); fi
 
 after_succes:
   - coveralls
+#
