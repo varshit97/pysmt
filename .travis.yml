@@ -11,7 +11,7 @@ env:
 matrix:
   allow_failures:
     - env: PYVERSION=python  PIP_CMD=pip  PYSMT_SOLVER="msat"
-    - env: PYVERSION=python3  PIP_CMD=pip  PYSMT_SOLVER="msat"
+    - env: PYVERSION=python3  PIP_CMD=pip3  PYSMT_SOLVER="msat"
 
 install:
   - "brew update"
