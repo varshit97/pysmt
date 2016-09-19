@@ -15,7 +15,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-from fractions import Fraction
 
 from six.moves import xrange
 
@@ -29,6 +28,7 @@ from pysmt.test import TestCase, skipIfNoSolverForLogic, main
 from pysmt.logics import QF_BOOL
 from pysmt.exceptions import NonLinearError, UndefinedSymbolError
 from pysmt.formula import FormulaManager
+from pysmt.constants import Fraction, Integer
 
 
 class TestFormulaManager(TestCase):
@@ -90,6 +90,45 @@ class TestFormulaManager(TestCase):
         c = self.mgr.Symbol("c")
         self.assertEqual(c.symbol_type(), BOOL, "Default Symbol Type is not BOOL")
 
+
+    def test_payload_assertions(self):
+        s = self.mgr.Symbol("x")
+        c = self.mgr.Int(0)
+
+        with self.assertRaises(AssertionError):
+            c.symbol_name()
+
+        with self.assertRaises(AssertionError):
+            c.symbol_type()
+
+        with self.assertRaises(AssertionError):
+            s.bv_width()
+
+        with self.assertRaises(AssertionError):
+            s.bv_extract_start()
+
+        with self.assertRaises(AssertionError):
+            s.bv_extract_end()
+
+        with self.assertRaises(AssertionError):
+            s.bv_rotation_step()
+
+        with self.assertRaises(AssertionError):
+            s.bv_extend_step()
+
+        with self.assertRaises(AssertionError):
+            s.bv_extract_end()
+
+        with self.assertRaises(AssertionError):
+            s.constant_value()
+
+        with self.assertRaises(AssertionError):
+            s.array_value_index_type()
+
+        with self.assertRaises(AssertionError):
+            s.function_name()
+
+
     def test_and_node(self):
         n = self.mgr.And(self.x, self.y)
         self.assertIsNotNone(n)
@@ -109,6 +148,7 @@ class TestFormulaManager(TestCase):
         one = self.mgr.And(self.x)
         self.assertEqual(one, self.x)
 
+        self.assertTrue(n.is_bool_op())
 
     def test_or_node(self):
         n = self.mgr.Or(self.x, self.y)
@@ -130,6 +170,7 @@ class TestFormulaManager(TestCase):
         one = self.mgr.Or(self.x)
         self.assertEqual(one, self.x)
 
+        self.assertTrue(n.is_bool_op())
 
     def test_not_node(self):
         n = self.mgr.Not(self.x)
@@ -143,6 +184,7 @@ class TestFormulaManager(TestCase):
         self.assertEqual(len(args), 1)
 
         self.assertEqual(self.mgr.Not(n), self.x)
+        self.assertTrue(n.is_bool_op())
 
     def test_implies_node(self):
         n = self.mgr.Implies(self.x, self.y)
@@ -155,6 +197,7 @@ class TestFormulaManager(TestCase):
         self.assertEqual(self.x, args[0])
         self.assertEqual(self.y, args[1])
         self.assertEqual(len(args), 2)
+        self.assertTrue(n.is_bool_op())
 
     def test_iff_node(self):
         n = self.mgr.Iff(self.x, self.y)
@@ -167,7 +210,7 @@ class TestFormulaManager(TestCase):
         self.assertIn(self.x, args)
         self.assertIn(self.y, args)
         self.assertEqual(len(args), 2)
-
+        self.assertTrue(n.is_bool_op())
 
     def test_ge_node_type(self):
         with self.assertRaises(TypeError):
@@ -198,6 +241,8 @@ class TestFormulaManager(TestCase):
 
         n = self.mgr.GE(self.p, self.q)
         self.assertIsNotNone(n)
+        self.assertFalse(n.is_bool_op())
+        self.assertTrue(n.is_theory_relation())
 
     def test_minus_node(self):
         n = self.mgr.Minus(self.real_expr, self.real_expr)
@@ -222,10 +267,10 @@ class TestFormulaManager(TestCase):
 
         self.assertTrue(n.is_minus())
         self.assertEqual(n.get_free_variables(), set([self.p, self.q]))
+        self.assertTrue(n.is_theory_op())
 
         with self.assertRaises(TypeError):
             n = self.mgr.Minus(self.r, self.q)
-
 
     def test_times_node(self):
         n = self.mgr.Times(self.real_expr, self.rconst)
@@ -233,6 +278,15 @@ class TestFormulaManager(TestCase):
         n = self.mgr.Times(self.r, self.rconst)
         self.assertIsNotNone(n)
         n = self.mgr.Times(self.rconst, self.rconst)
+        self.assertIsNotNone(n)
+
+        n = self.mgr.Times(self.r, self.s, self.rconst)
+        self.assertIsNotNone(n)
+
+        n = self.mgr.Times([self.r, self.s, self.rconst])
+        self.assertIsNotNone(n)
+
+        n = self.mgr.Times(x for x in [self.r, self.s, self.rconst])
         self.assertIsNotNone(n)
 
         n = self.mgr.Times(self.rconst, self.s)
@@ -249,6 +303,7 @@ class TestFormulaManager(TestCase):
 
         n = self.mgr.Times(self.iconst, self.q)
         self.assertIsNotNone(n)
+        self.assertTrue(n.is_ira_op())
 
     def test_div_node(self):
         n = self.mgr.Div(self.real_expr, self.rconst)
@@ -279,6 +334,7 @@ class TestFormulaManager(TestCase):
 
         self.assertTrue(n.is_equals())
         self.assertEqual(n.get_free_variables(), set([self.p, self.q]))
+        self.assertTrue(n.is_theory_relation())
 
         with self.assertRaises(TypeError):
             n = self.mgr.Equals(self.p, self.r)
@@ -312,6 +368,7 @@ class TestFormulaManager(TestCase):
 
         n = self.mgr.GT(self.p, self.q)
         self.assertIsNotNone(n)
+        self.assertTrue(n.is_theory_relation())
 
     def test_le_node_type(self):
         with self.assertRaises(TypeError):
@@ -339,6 +396,7 @@ class TestFormulaManager(TestCase):
         self.assertIn(self.r, args)
         self.assertIn(self.s, args)
         self.assertEqual(len(args), 2)
+        self.assertTrue(n.is_theory_relation())
 
     def test_lt_node_type(self):
         with self.assertRaises(TypeError):
@@ -366,6 +424,7 @@ class TestFormulaManager(TestCase):
         self.assertIn(self.r, args)
         self.assertIn(self.s, args)
         self.assertEqual(len(args), 2)
+        self.assertTrue(n.is_theory_relation())
 
     def test_ite(self):
         n = self.mgr.Ite(self.x, self.y, self.x)
@@ -387,7 +446,6 @@ class TestFormulaManager(TestCase):
 
         with self.assertRaises(TypeError):
             self.mgr.Ite(self.x, self.p, self.r)
-
 
     def test_function(self):
         n = self.mgr.Function(self.f, [self.r, self.s])
@@ -438,6 +496,13 @@ class TestFormulaManager(TestCase):
         self.assertTrue(nd.is_constant())
         self.assertTrue(nd.is_int_constant())
 
+        # Memoization of constants
+        a = self.mgr.Real(Fraction(1,2))
+        b = self.mgr.Real((1,2))
+        c = self.mgr.Real(1.0/2.0)
+        self.assertEqual(a,b)
+        self.assertEqual(b,c)
+
     def test_bconstant(self):
         n = self.mgr.Bool(True)
         m = self.mgr.Bool(False)
@@ -460,7 +525,6 @@ class TestFormulaManager(TestCase):
 
         with self.assertRaises(TypeError):
             self.mgr.Plus()
-
 
         n1 = self.mgr.Plus([self.r, self.s])
         n2 = self.mgr.Plus(self.r, self.s)
@@ -948,7 +1012,59 @@ class TestFormulaManager(TestCase):
         a1 = self.mgr.Array(INT, self.mgr.Int(0))
         a2 = self.mgr.Array(INT, self.mgr.Int(0),
                             {self.mgr.Int(12) : self.mgr.Int(0)})
-        self.assertEquals(a1, a2)
+        self.assertEqual(a1, a2)
+
+    def test_real(self):
+        """Create Real using different constant types."""
+        from fractions import Fraction as pyFraction
+        from pysmt.constants import HAS_GMPY
+
+        v1 = (1,2)
+        v2 = 0.5
+        v3 = pyFraction(1,2)
+        v4 = Fraction(1,2)
+
+        c1 = self.mgr.Real(v1)
+        c2 = self.mgr.Real(v2)
+        c3 = self.mgr.Real(v3)
+        c4 = self.mgr.Real(v4)
+
+        self.assertIs(c1, c2)
+        self.assertIs(c2, c3)
+        self.assertIs(c3, c4)
+
+        if HAS_GMPY:
+            from gmpy2 import mpq, mpz
+            v5 = (mpz(1), mpz(2))
+            v6 = mpq(1,2)
+
+            c5 = self.mgr.Real(v5)
+            c6 = self.mgr.Real(v6)
+            self.assertIs(c4, c5)
+            self.assertIs(c5, c6)
+
+    def test_integer(self):
+        """Create Int using different constant types."""
+        from pysmt.constants import HAS_GMPY
+        from six import PY2
+
+        v_base = Integer(1)
+        c_base = self.mgr.Int(v_base)
+
+        v_int = int(1)
+        c_int = self.mgr.Int(v_int)
+        self.assertIs(c_base, c_int)
+
+        if PY2:
+            v_long = long(1)
+            c_long = self.mgr.Int(v_long)
+            self.assertIs(c_base, c_long)
+
+        if HAS_GMPY:
+            from gmpy2 import mpz
+            v_mpz = mpz(1)
+            c_mpz = self.mgr.Int(v_mpz)
+            self.assertIs(c_base, c_mpz)
 
 
 class TestShortcuts(TestCase):

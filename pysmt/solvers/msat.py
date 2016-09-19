@@ -15,13 +15,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-import re
-
 from warnings import warn
-from fractions import Fraction
 from six.moves import xrange
 
 from pysmt.exceptions import SolverAPINotFound
+from pysmt.constants import Fraction, is_pysmt_fraction, is_pysmt_integer
 
 try:
     import mathsat
@@ -868,15 +866,14 @@ class MSatConverter(Converter, DagWalker):
             return mathsat.msat_make_term_ite(self.msat_env(), i, t, e)
 
     def walk_real_constant(self, formula, **kwargs):
-        assert type(formula.constant_value()) == Fraction
+        assert is_pysmt_fraction(formula.constant_value())
         frac = formula.constant_value()
         n,d = frac.numerator, frac.denominator
         rep = str(n) + "/" + str(d)
         return mathsat.msat_make_number(self.msat_env(), rep)
 
     def walk_int_constant(self, formula, **kwargs):
-        assert type(formula.constant_value()) == int or \
-            type(formula.constant_value()) == long
+        assert is_pysmt_integer(formula.constant_value())
         rep = str(formula.constant_value())
         return mathsat.msat_make_number(self.msat_env(), rep)
 
@@ -1022,10 +1019,16 @@ class MSatConverter(Converter, DagWalker):
         return mathsat.msat_make_or(self.msat_env(), neg, args[1])
 
     def walk_times(self, formula, args, **kwargs):
-        if not mathsat.msat_term_is_number(self.msat_env(), args[0]) and \
-           not mathsat.msat_term_is_number(self.msat_env(), args[1]):
-            raise NonLinearError(formula)
-        return mathsat.msat_make_times(self.msat_env(), args[0], args[1])
+        res = args[0]
+        nl_count = 0 if mathsat.msat_term_is_number(self.msat_env(), res) else 1
+        for x in args[1:]:
+            if not mathsat.msat_term_is_number(self.msat_env(), x):
+                nl_count += 1
+            if nl_count >= 2:
+                raise NonLinearError(formula)
+            else:
+                res = mathsat.msat_make_times(self.msat_env(), res, x)
+        return res
 
     def walk_function(self, formula, args, **kwargs):
         name = formula.function_name()

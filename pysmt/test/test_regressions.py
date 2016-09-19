@@ -15,7 +15,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-from fractions import Fraction
 from six.moves import xrange
 from six.moves import cStringIO
 
@@ -37,6 +36,7 @@ import pysmt.logics as logics
 import pysmt.smtlib.commands as smtcmd
 from pysmt.smtlib.script import SmtLibCommand
 from pysmt.logics import get_closer_smtlib_logic
+from pysmt.constants import Fraction
 
 
 class TestRegressions(TestCase):
@@ -221,7 +221,7 @@ class TestRegressions(TestCase):
         f1 = ExactlyOne(elems)
         f2 = ExactlyOne(e for e in elems)
 
-        self.assertEquals(f1, f2)
+        self.assertEqual(f1, f2)
 
     def test_determinism(self):
         def get_set(env):
@@ -247,7 +247,7 @@ class TestRegressions(TestCase):
                 # The ordering of the sets should be the same...
                 for i,f in enumerate(l1):
                     nf = new_env.formula_manager.normalize(f)
-                    self.assertEquals(nf, l_test[i])
+                    self.assertEqual(nf, l_test[i])
 
     def test_is_one(self):
         self.assertTrue(Int(1).is_one())
@@ -272,9 +272,7 @@ class TestRegressions(TestCase):
 
     def test_smtlib_info_quoting(self):
         cmd = SmtLibCommand(smtcmd.SET_INFO, [":source", "This\nis\nmultiline!"])
-        outstream = cStringIO()
-        cmd.serialize(outstream)
-        output = outstream.getvalue()
+        output = cmd.serialize_to_string()
         self.assertEqual(output, "(set-info :source |This\nis\nmultiline!|)")
 
     def test_parse_define_fun(self):
@@ -290,6 +288,11 @@ class TestRegressions(TestCase):
         parser = SmtLibParser()
         buffer_ = cStringIO(smtlib_input)
         parser.get_script(buffer_)
+
+    def test_simplify_times(self):
+        a,b = Real(5), Real((1,5))
+        f = Times(a,b).simplify()
+        self.assertEqual(f.constant_value(), 1)
 
     @skipIfSolverNotAvailable("yices")
     def test_yices_push(self):
@@ -346,8 +349,8 @@ class TestRegressions(TestCase):
             x = Symbol("x", BVType(16))
             s.add_assertion(Equals(x, BV(1, 16)))
             self.assertTrue(s.solve())
-            self.assertEquals(s.get_value(Equals(x, BV(1, 16))), TRUE())
-            self.assertEquals(s.get_value(BVAdd(x, BV(1, 16))), BV(2, 16))
+            self.assertEqual(s.get_value(Equals(x, BV(1, 16))), TRUE())
+            self.assertEqual(s.get_value(BVAdd(x, BV(1, 16))), BV(2, 16))
 
     @skipIfSolverNotAvailable("btor")
     def test_btor_get_array_element(self):
@@ -356,8 +359,18 @@ class TestRegressions(TestCase):
             s.add_assertion(Equals(Select(x, BV(1, 16)), BV(1, 16)))
             s.add_assertion(Equals(Select(x, BV(2, 16)), BV(3, 16)))
             self.assertTrue(s.solve())
-            self.assertEquals(s.get_value(Select(x, BV(1, 16))), BV(1, 16))
+            self.assertEqual(s.get_value(Select(x, BV(1, 16))), BV(1, 16))
             self.assertIsNotNone(s.get_value(x))
+
+
+    def test_smtlib_define_fun_serialization(self):
+        smtlib_input = "(define-fun init ((x Bool)) Bool (and x (and x (and x (and x (and x (and x x)))))))"
+        parser = SmtLibParser()
+        buffer_ = cStringIO(smtlib_input)
+        s = parser.get_script(buffer_)
+        for c in s:
+            res = c.serialize_to_string()
+        self.assertEqual(res, smtlib_input)
 
 
 if __name__ == "__main__":

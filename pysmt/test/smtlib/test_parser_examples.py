@@ -15,6 +15,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+import os
+from tempfile import mkstemp
+
 from six.moves import cStringIO
 
 import pysmt.logics as logics
@@ -23,7 +26,7 @@ from pysmt.test.examples import get_example_formulae
 from pysmt.smtlib.parser import SmtLibParser
 from pysmt.smtlib.script import smtlibscript_from_formula
 from pysmt.shortcuts import Iff
-
+from pysmt.shortcuts import read_smtlib, write_smtlib
 
 
 class TestSMTParseExamples(TestCase):
@@ -129,5 +132,17 @@ class TestSMTParseExamples(TestCase):
                 print("-"*40)
                 print(script_in)
 
-if __name__ == '__main__':
+    def test_read_and_write_shortcuts(self):
+        fs = get_example_formulae()
+
+        fdi, tmp_fname = mkstemp()
+        os.close(fdi) # Close initial file descriptor
+        for (f_out, _, _, _) in fs:
+            write_smtlib(f_out, tmp_fname)
+            f_in = read_smtlib(tmp_fname)
+            self.assertEqual(f_out.simplify(), f_in.simplify())
+        # Clean-up
+        os.remove(tmp_fname)
+
+if __name__ == "__main__":
     main()

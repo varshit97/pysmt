@@ -22,7 +22,9 @@ import pysmt.operators as op
 import pysmt.typing as types
 from pysmt.utils import set_bit
 
+
 class Simplifier(pysmt.walkers.DagWalker):
+    """Perform basic simplifications of the input formula."""
 
     def __init__(self, env=None):
         pysmt.walkers.DagWalker.__init__(self, env=env)
@@ -41,7 +43,12 @@ class Simplifier(pysmt.walkers.DagWalker):
 
     @validate_simplifications.setter
     def validate_simplifications(self, value):
-        if value is not None:
+        """If set to true: checks for equivalence after each simplification.
+
+        NOTE: This can be very expensive, and should be used for debug
+        and testing only.
+        """
+        if value:
             self.walk = self.walk_debug
         else:
             # Restore original walk method
@@ -269,14 +276,14 @@ class Simplifier(pysmt.walkers.DagWalker):
             minus_one = self.manager.Real(-1) if is_real else \
                         self.manager.Int(-1)
             # (+ (* -1 X) Y) => (- Y X)
-            if ns[0].is_times():
+            if ns[0].is_times() and len(ns[0].args()) == 2:
                 t = ns[0]
                 if t.arg(0) == minus_one:
                     return self.manager.Minus(ns[1], t.arg(1))
                 if t.arg(1) == minus_one:
                     return self.manager.Minus(ns[1], t.arg(0))
             # (+ Y (* -1 X)) => (- Y X)
-            if ns[1].is_times():
+            if ns[1].is_times() and len(ns[0].args()) == 2:
                 t = ns[1]
                 if t.arg(0) == minus_one:
                     return self.manager.Minus(ns[0], t.arg(1))
@@ -288,44 +295,46 @@ class Simplifier(pysmt.walkers.DagWalker):
         return self.manager.Plus(ns)
 
     def walk_times(self, formula, args, **kwargs):
-        assert len(args) == 2
-
-        sl = args[0]
-        sr = args[1]
-
-        if sl.is_constant() and sr.is_constant():
-            l = sl.constant_value()
-            r = sr.constant_value()
-            if sl.is_real_constant():
-                return self.manager.Real(l * r)
-            elif sl.is_int_constant():
-                return self.manager.Int(l * r)
+        new_args = []
+        constant_mul = 1
+        stack = list(args)
+        ttype = self.env.stc.get_type(args[0])
+        is_algebraic = False
+        while len(stack) > 0:
+            x = stack.pop()
+            if x.is_constant():
+                if x.is_algebraic_constant():
+                    is_algebraic = True
+                if x.is_zero():
+                    constant_mul = 0
+                    break
+                else:
+                    constant_mul *= x.constant_value()
+            elif x.is_times():
+                stack += x.args()
             else:
-                assert sl.is_algebraic_constant()
-                from pysmt.numeral import Numeral
-                return self.manager._Algebraic(Numeral(l * r))
+                new_args.append(x)
 
-        if sl.is_constant():
-            if sl.is_one():
-                return sr
-            elif sl.is_zero():
-                if sl.is_real_constant():
-                    return self.manager.Real(0)
-                else:
-                    assert sl.is_int_constant()
-                    return self.manager.Int(0)
+        const = None
+        if is_algebraic:
+            from pysmt.constants import Numeral
+            const = self.manager._Algebraic(Numeral(constant_mul))
+        elif ttype.is_real_type():
+            const = self.manager.Real(constant_mul)
+        else:
+            assert ttype.is_int_type()
+            const = self.manager.Int(constant_mul)
 
-        if sr.is_constant():
-            if sr.is_one():
-                return sl
-            elif sr.is_zero():
-                if sr.is_real_constant():
-                    return self.manager.Real(0)
-                else:
-                    assert sr.is_int_constant()
-                    return self.manager.Int(0)
+        if const.is_zero():
+            return const
+        else:
+            if len(new_args) == 0:
+                return const
+            elif not const.is_one():
+                new_args.append(const)
 
-        return self.manager.Times(sl, sr)
+        return self.manager.Times(new_args)
+
 
     def walk_pow(self, formula, args, **kwargs):
         if args[0].is_real_constant():
@@ -757,3 +766,106 @@ class Simplifier(pysmt.walkers.DagWalker):
         return self.manager.Div(sl, sr)
 
 # EOC Simplifier
+
+
+class BddSimplifier(Simplifier):
+    """A simplifier relying on BDDs.
+
+    The formula is translated into a BDD and then translated back into
+    a pySMT formula. This is a much more expensive simplification
+    process, and might not work with formulas with thousands of
+    boolean variables.
+
+    The option ``static_ordering`` can be used to provide a variable
+    ordering for the underlying bdd.
+
+    The option ``bool_abstraction`` controls how to behave if the
+    input formula contains Theory terms (i.e., is not purely boolean).
+    If this option is False (default) an exception will be thrown when
+    a Theory atom is found. If it is set to True, the Theory part is
+    abstracted, and the simplification is performed only on the
+    boolean structure of the formula.
+    """
+
+    def __init__(self, env=None, static_ordering=None, bool_abstraction=False):
+        Simplifier.__init__(self, env=env)
+        self.super_functions = dict(self.functions)
+        self._validation_sname = None
+
+        Solver = self.env.factory.Solver
+        if static_ordering is not None:
+            self.s = Solver(name="bdd", static_ordering=static_ordering)
+        else:
+            self.s = Solver(name="bdd", dynamic_reordering=True)
+        self.convert = self.s.converter.convert
+        self.back = self.s.converter.back
+        # Set methods for boolean_abstraction
+        self.bool_abstraction = bool_abstraction
+        self.set_function(self.walk_simplify_and_abstract, *op.RELATIONS)
+        self.set_function(self.walk_abstract_function, op.FUNCTION)
+        self.ba_map = {}
+        self.get_type = self.env.stc.get_type
+        self.FreshSymbol = self.env.formula_manager.FreshSymbol
+
+    @property
+    def validate_simplifications(self):
+        return self._validate_simplifications
+
+    @validate_simplifications.setter
+    def validate_simplifications(self, value):
+        possible_solvers = [sname for sname in self.env.factory.all_solvers()\
+                            if sname!="bdd"]
+        if len(possible_solvers) == 0:
+            raise ValueError("To validate at least another solver must be available!")
+        self._validation_sname = possible_solvers[0]
+        self._validate_simplifications = value
+
+    def simplify(self, formula):
+        from pysmt.oracles import get_logic
+        from pysmt.logics import BOOL, QF_BOOL
+        if self.bool_abstraction:
+            logic = get_logic(formula)
+            if logic > QF_BOOL and logic != BOOL:
+                res = self.abstract_and_simplify(formula)
+            else:
+                res = self.back(self.convert(formula))
+        else:
+            res = self.back(self.convert(formula))
+        self._validate(formula, res)
+        return res
+
+    def _validate(self, old, new):
+        if self.validate_simplifications:
+            Iff = self.env.formula_manager.Iff
+            is_valid = self.env.factory.is_valid
+            sname = self._validation_sname
+            assert is_valid(Iff(old, new), solver_name=sname ), \
+              "Was: %s \n Obtained: %s\n" % (str(old), str(new))
+
+    def abstract_and_simplify(self, formula):
+        abs_formula = self.walk(formula)
+        abs_res = self.back(self.convert(abs_formula))
+        print(formula, abs_formula, abs_res)
+        res = abs_res.substitute(self.ba_map)
+        return res
+
+    def walk_simplify_and_abstract(self, formula, args, **kwargs):
+        super_rewriter = self.super_functions[formula.node_type()]
+        rewritten = super_rewriter(formula, args, **kwargs)
+        print(rewritten)
+        if rewritten.is_bool_constant():
+            return rewritten
+        new_var = self.FreshSymbol()
+        self.ba_map[new_var] = rewritten
+        return new_var
+
+    def walk_abstract_function(self, formula, args, **kwargs):
+        super_rewriter = self.super_functions[formula.node_type()]
+        rewritten = super_rewriter(formula, args, **kwargs)
+        if rewritten.function_name().symbol_type().return_type.is_bool_type():
+            new_var = self.FreshSymbol()
+            self.ba_map[new_var] = rewritten
+            return new_var
+        return rewritten
+
+#EOC BddSimplifier

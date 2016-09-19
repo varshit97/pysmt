@@ -20,12 +20,14 @@
 This module defines a global environment, so that most methods can be
 called without the need to specify an environment or a FormulaManager.
 Functions trying to access the global environment should use the
-method get_global_env(). Keep in mind that the global state of the
+method get_env(). Keep in mind that the global state of the
 environment might lead to inconsistency and unexpected bugs. This is
 particularly true for tests. For tests it is recommended to perform an
 environment reset in the setUp phase, to be guaranteed that a fresh
-environment is used.
+environment is used (this is the default behavior of
+:py:class:`pysmt.test.TestCase` ).
 """
+
 # Enable default deprecation warnings!
 import warnings
 warnings.simplefilter('default')
@@ -33,6 +35,8 @@ warnings.simplefilter('default')
 import pysmt.typing as types
 import pysmt.configuration as config
 import pysmt.environment
+import pysmt.smtlib.parser
+import pysmt.smtlib.script
 
 
 def get_env():
@@ -113,9 +117,9 @@ def Minus(left, right):
     r""".. math:: l - r """
     return get_env().formula_manager.Minus(left, right)
 
-def Times(left, right):
-    r""".. math:: l * r"""
-    return get_env().formula_manager.Times(left, right)
+def Times(*args):
+    r""".. math:: x_1 \times x_2 \cdots \times x_n"""
+    return get_env().formula_manager.Times(*args)
 
 def Pow(left, right):
     r""".. math:: l ^ r"""
@@ -562,6 +566,7 @@ def get_unsat_core(clauses, solver_name=None, logic=None):
     """Similar to :py:func:`get_model` but returns the unsat core of the
     conjunction of the input clauses"""
     env = get_env()
+    clauses = list(clauses)
     if any(c not in env.formula_manager for c in clauses):
         warnings.warn("Warning: Contextualizing formula during get_model")
         clauses = [env.formula_manager.normalize(c) for c in clauses]
@@ -650,3 +655,16 @@ def write_configuration(config_filename, environment=None):
     if environment is None:
         environment = get_env()
     config.write_environment_configuration(config_filename, environment)
+
+def read_smtlib(fname):
+    """Reads the SMT formula from the given file.
+
+    This supports compressed files, if the fname ends in .bz2 .
+    """
+    return pysmt.smtlib.parser.get_formula_fname(fname)
+
+def write_smtlib(formula, fname):
+    """Reads the SMT formula from the given file."""
+    with open(fname, "w") as fout:
+        script = pysmt.smtlib.script.smtlibscript_from_formula(formula)
+        script.serialize(fout)

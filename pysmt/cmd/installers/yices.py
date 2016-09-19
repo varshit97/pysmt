@@ -58,9 +58,6 @@ class YicesInstaller(SolverInstaller):
         wheel_file = glob.glob(os.path.join(self.base_dir, "yicespy") + "*.whl")[0]
         SolverInstaller.unzip(wheel_file, self.bindings_dir)
 
-
-
-
     def compile(self):
         # Prepare an empty folder for installing yices
         SolverInstaller.clean_dir(self.yices_path)
@@ -83,4 +80,6 @@ class YicesInstaller(SolverInstaller):
             finally:
                 if "yicespy" in sys.modules:
                     del sys.modules["yicespy"]
+                # Return None, without raising an exception
+                # pylint: disable=lost-exception
                 return version

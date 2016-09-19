@@ -21,7 +21,7 @@ from six.moves import xrange
 from pysmt.shortcuts import Or, And, Not, Plus, Iff, Implies
 from pysmt.shortcuts import Exists, ForAll, Ite, ExactlyOne
 from pysmt.shortcuts import Bool, Real, Int, Symbol, Function
-from pysmt.shortcuts import Times, Minus, Equals, LE, LT, ToReal
+from pysmt.shortcuts import Times, Minus, Equals, LE, LT, ToReal, FreshSymbol
 from pysmt.typing import REAL, INT, FunctionType
 from pysmt.smtlib.printers import SmtPrinter, SmtDagPrinter
 from pysmt.printers import smart_serialize
@@ -196,6 +196,17 @@ class TestPrinting(TestCase):
         self.assertTrue(len(old_str) > len(smart_str))
         self.assertEqual("ExactlyOne(x0,x1,x2,x3,x4)", smart_str)
 
+    def test_stack_recursion(self):
+        import sys
+        limit = sys.getrecursionlimit()
+        f = FreshSymbol()
+        p = FreshSymbol()
+        for _ in xrange(limit):
+            f = Or(p, And(f, p))
+        self.assertTrue(f.size() >= limit)
+        s = f.serialize()
+        self.assertIsNotNone(s)
+
 
 SERIALIZED_EXAMPLES = [
     """(x & y)""",
@@ -286,6 +297,14 @@ SERIALIZED_EXAMPLES = [
     """(2.0 = (r * r))""",
     """((p ^ 2) = 0)""",
     """((r ^ 2.0) = 0.0)""",
+    """((r * r * r) = 25.0)""",
+    """((5.0 * r * 5.0) = 25.0)""",
+    """((p * p * p) = 25)""",
+    """((5 * p * 5) = 25)""",
+    """(((1 - 1) * p * 1) = 0)""",
+    """((r * 1606938044258990275541962092341162602522202993782792835301376/7) = -20480000000000000000000000.0)""",
+    """(((r + 5.0 + s) * (s + 2.0 + r)) = 0.0)""",
+    """(((p + 5 + q) * (p - (q - 5))) = ((p * p) + (10 * p) + 25 + (-1 * q * q)))""",
 ]
 
 

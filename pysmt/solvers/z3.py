@@ -24,11 +24,9 @@ try:
 except ImportError:
     raise SolverAPINotFound
 
-from fractions import Fraction
 from six.moves import xrange
 
 import pysmt.typing as types
-import pysmt.operators as op
 from pysmt.solvers.solver import (IncrementalTrackingSolver, UnsatCoreSolver,
                                   Model, Converter)
 from pysmt.solvers.smtlib import SmtLibBasicSolver, SmtLibIgnoreMixin
@@ -44,7 +42,7 @@ from pysmt.exceptions import (SolverReturnedUnknownResultError,
 from pysmt.decorators import clear_pending_pop, catch_conversion_error
 from pysmt.logics import LRA, LIA, QF_UFLIA, QF_UFLRA, PYSMT_LOGICS, QF_SLIA
 from pysmt.oracles import get_logic
-from pysmt.numeral import Numeral
+from pysmt.constants import Fraction, Numeral, is_pysmt_integer, to_python_integer
 
 
 # patch z3api
@@ -569,9 +567,8 @@ class Z3Converter(Converter, DagWalker):
         return z3.RealVal(rep)
 
     def walk_int_constant(self, formula, **kwargs):
-        assert type(formula.constant_value()) == int or \
-            type(formula.constant_value()) == long
-        return z3.IntVal(formula.constant_value())
+        assert is_pysmt_integer(formula.constant_value())
+        return z3.IntVal(to_python_integer(formula.constant_value()))
 
     def walk_bool_constant(self, formula, **kwargs):
         return z3.BoolVal(formula.constant_value())
@@ -596,7 +593,10 @@ class Z3Converter(Converter, DagWalker):
         return (args[0] == args[1])
 
     def walk_times(self, formula, args, **kwargs):
-        return (args[0] * args[1])
+        res = args[0]
+        for x in args[1:]:
+            res *= x
+        return res
 
     def walk_pow(self, formula, args, **kwargs):
         return args[0]**args[1]

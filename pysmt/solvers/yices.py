@@ -18,7 +18,6 @@
 import atexit
 
 from six.moves import xrange
-from fractions import Fraction
 
 from pysmt.exceptions import SolverAPINotFound
 
@@ -36,6 +35,7 @@ from pysmt.walkers import DagWalker
 from pysmt.exceptions import SolverReturnedUnknownResultError
 from pysmt.exceptions import InternalSolverError, NonLinearError
 from pysmt.decorators import clear_pending_pop, catch_conversion_error
+from pysmt.constants import Fraction, is_pysmt_integer
 
 import pysmt.logics
 
@@ -300,8 +300,7 @@ class YicesConverter(Converter, DagWalker):
         return res
 
     def walk_int_constant(self, formula, **kwargs):
-        assert type(formula.constant_value()) == int or \
-            type(formula.constant_value()) == long
+        assert is_pysmt_integer(formula.constant_value())
         rep = str(formula.constant_value())
         res = yicespy.yices_parse_rational(rep)
         self._check_term_result(res)
@@ -362,8 +361,10 @@ class YicesConverter(Converter, DagWalker):
         return res
 
     def walk_times(self, formula, args, **kwargs):
-        res = yicespy.yices_mul(args[0], args[1])
-        self._check_term_result(res)
+        res = args[0]
+        for x in args[1:]:
+            res = yicespy.yices_mul(res, x)
+            self._check_term_result(res)
         return res
 
     def walk_toreal(self, formula, args, **kwargs):

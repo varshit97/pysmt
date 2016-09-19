@@ -48,6 +48,7 @@ class DagWalker(Walker):
     def _get_children(self, formula):
         return formula.args()
 
+
     def _push_with_children_to_stack(self, formula, **kwargs):
         """Add children to the stack."""
         self.stack.append((True, formula))
@@ -70,8 +71,13 @@ class DagWalker(Walker):
             except KeyError:
                 f = self.walk_error
 
-            args = [self.memoization[self._get_key(s, **kwargs)] \
-                    for s in self._get_children(formula)]
+            try:
+                args = [self.memoization[self._get_key(s, **kwargs)] \
+                        for s in self._get_children(formula)]
+            except KeyError as ex:
+                # This should never happen in nominal execution.
+                # We catch the exception to simplify debugging
+                raise KeyError(ex.message, formula, self._get_key(s, **kwargs))
             self.memoization[key] = f(formula, args=args, **kwargs)
         else:
             pass

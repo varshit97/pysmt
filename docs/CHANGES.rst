@@ -1,11 +1,72 @@
 Change Log
 ==========
 
-GIT-master: XXXX-XX-XX -- ??
-----------------------------
-* Added support for non-linear, polynomial arithmetic. This fature si
-  currently supported only by Z3. For this reason we rely on z3 to
-  represent algebraic solutions (e.g., sqrt(2)).
+HEAD: XXXX-XX-XX -- YYYYYYYYYYYY
+--------------------------------
+
+0.5.1: 2016-08-17 -- NIRA and Python 3.5
+----------------------------------------
+
+Theories:
+
+* Non Linear Arithmetic (NRA/NIA): Added support for
+  non-linear, polynomial arithmetic. This thoery is currently
+  supported only by Z3. (PR #282)
+
+  * New operator POW and DIV
+
+  * LIRA Solvers not supporting Non-Linear will raise the
+    NonLinearError exception, while solvers not supporting arithmetics
+    will raise a ConvertExpressionError exception (see
+    test_nlira.py:test_unknownresult)
+
+  * Algebraic solutions (e.g., sqrt(2) are represented using the
+    internal z3 object -- This is bound to change in the future.
+
+
+General:
+
+* Python 3.5: Full support for Python 3.5, all solvers are now tested
+  (and working) on Python 3.5 (PR #287)
+
+* Improved installed solvers check (install.py)
+
+  - install.py --check now takes into account the bindings_dir and
+    prints the version of the installed solver
+
+  - Bindings are installed in different directories depending on the
+    minor version of Python. In this way it is possible to use both
+    Python 2.7 and 3.5.
+
+  - There is a distinction btw installed solvers and solvers in the
+    PYTHONPATH.
+
+  - Qelim, Unsat-Core and Interpolants are also visualized (but not
+    checked)
+
+* Support for reading compressed SMT-LIB files (.bz2)
+
+* Simplified HRPrinter code
+
+* Removed six dependency from type_checker (PR #283)
+
+* BddSimplifier (pysmt.simplifier.BddSimplifier): Uses BDDs
+  to simplify the boolean structure of an SMT formula. (See
+  test_simplify.py:test_bdd_simplify) (PR #286)
+
+
+Solvers:
+
+* Yices: New wrapper supporting python 3.5 (https://github.com/pysmt/yicespy)
+* Yices: Upgrade to 2.4.2
+* SMT-LIB Wrapper: Improved interaction with subprocess (#298)
+
+Bugfix:
+
+* Bugfix in Z3Converter.walk_array_value. Thanks to **Alberto Griggio**
+  for contributing this patch
+
+* Bugfix in DL Logic comparison (commit 9e9c8c)
 
 
 0.5.0: 2016-06-09 -- Arrays
@@ -15,12 +76,12 @@ BACKWARDS INCOMPATIBLE CHANGES:
 
 * MGSubstituter becomes the new default substitution method (PR #253)
 
-  When performing substitution with a mapping like ```{a: b, Not(a),
-  c}```, ```Not(a)``` is considered before ```a```. The previous
-  behavior (MSSubstituter) would have substituted ```a``` first, and
-  then the rule for ```Not(a)``` would not have been applied.
+  When performing substitution with a mapping like ``{a: b, Not(a),
+  c}``, ``Not(a)`` is considered before ``a``. The previous
+  behavior (MSSubstituter) would have substituted ``a`` first, and
+  then the rule for ``Not(a)`` would not have been applied.
 
-* Removed argument ```user_options``` from Solver()
+* Removed argument ``user_options`` from Solver()
 
 Theories:
 
@@ -58,7 +119,7 @@ General:
   catch typos etc. by raising a ValueError exception if the option is
   unknown.
 
-  It is now possible to do: ```Solver(name="bdd", dynamic_reordering=True)```
+  It is now possible to do: ``Solver(name="bdd", dynamic_reordering=True)``
 
 
 Solvers:
@@ -104,7 +165,7 @@ General:
 * pysmt.parsing: Added parser for Human Readable expressions
 * pysmt-install: new installer engine
 * Most General Substitution: Introduced new Substituter, that performs
-top-down substitution. This will become the default in version 0.5.
+  top-down substitution. This will become the default in version 0.5.
 * Improved compliance with SMT-LIB 2 and 2.5
 * EagerModel can now take a solver model in input
 * Introduce new exception 'UndefinedSymbolError' when trying to access

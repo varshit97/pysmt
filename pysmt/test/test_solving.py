@@ -83,7 +83,7 @@ class TestBasic(TestCase):
         factory = get_env().factory
         factory.default_logic = QF_BOOL
 
-        self.assertEquals(factory.default_logic, QF_BOOL)
+        self.assertEqual(factory.default_logic, QF_BOOL)
         varA = Symbol("A", BOOL)
         varB = Symbol("B", BOOL)
 
@@ -292,7 +292,7 @@ class TestBasic(TestCase):
                     self.assertEqual(satisfiability, s, f.serialize())
                 except SolverReturnedUnknownResultError:
                     s = Solver(logic=logic)
-                    print(s, logic, f)
+                    print(s, logic, f.serialize())
                     self.assertFalse(logic.quantifier_free,
                                      "Unkown result are accepted only on "\
                                      "Quantified formulae")
