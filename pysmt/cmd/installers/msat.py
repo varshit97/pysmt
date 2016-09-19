@@ -15,6 +15,7 @@
 import os
 import re
 import sys
+import platform
 
 from pysmt.cmd.installers.base import SolverInstaller, TemporaryPath
 
@@ -28,7 +29,10 @@ class MSatInstaller(SolverInstaller):
         archive_name = "mathsat-%s-%s-%s.tar.gz" % (solver_version,
                                                     self.os_name,
                                                     self.architecture)
+        if self.os_name == "darwin":
+            archive_name = archive_name.replace("darwin", "darwin-libcxx")
         native_link = "http://mathsat.fbk.eu/download.php?file={archive_name}"
+
         SolverInstaller.__init__(self, install_dir=install_dir,
                                  bindings_dir=bindings_dir,
                                  solver_version=solver_version,
@@ -38,20 +42,15 @@ class MSatInstaller(SolverInstaller):
 
         self.python_bindings_dir = os.path.join(self.extract_path, "python")
 
-
     def compile(self):
-        # Download patched mathsat wrapper using SWIG3
-        # #255: This should be removed once PY3 compatibility is restore upstream
-        mathsat_wrap = "https://raw.githubusercontent.com/pysmt/solvers_patches/e1418d046a2f2f5ebb243e7167a6290e8e8b9b15/mathsat_python_wrap.c"
-        self.do_download(mathsat_wrap,
-                         os.path.join(self.python_bindings_dir, "mathsat_python_wrap.c"))
-        # End #255
         SolverInstaller.run_python("./setup.py build", self.python_bindings_dir)
-
 
     def move(self):
         libdir = "lib.%s-%s-%s" % (self.os_name, self.architecture,
                                    self.python_version)
+        if self.os_name == "darwin":
+            osx_version = ".".join(platform.mac_ver()[0].split(".")[:2])
+            libdir = libdir.replace("darwin", "macosx-%s" % osx_version)
         pdir = self.python_bindings_dir
         bdir = os.path.join(pdir, "build")
         sodir = os.path.join(bdir, libdir)
@@ -60,13 +59,6 @@ class MSatInstaller(SolverInstaller):
             if f.endswith(".so"):
                 SolverInstaller.mv(os.path.join(sodir, f), self.bindings_dir)
         SolverInstaller.mv(os.path.join(pdir, "mathsat.py"), self.bindings_dir)
-
-        # Overwrite mathsat.py with PY3 compatible version
-        # #255: This should be removed once PY3 compatibility is restore upstream
-        mathsat_wrap = "https://raw.githubusercontent.com/pysmt/solvers_patches/e1418d046a2f2f5ebb243e7167a6290e8e8b9b15/mathsat.py"
-        self.do_download(mathsat_wrap,
-                         os.path.join(self.bindings_dir, "mathsat.py"))
-
 
     def get_installed_version(self):
         with TemporaryPath([self.bindings_dir]):

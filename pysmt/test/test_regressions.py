@@ -15,7 +15,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-from fractions import Fraction
 from six.moves import xrange
 from six.moves import cStringIO
 
@@ -37,6 +36,7 @@ import pysmt.logics as logics
 import pysmt.smtlib.commands as smtcmd
 from pysmt.smtlib.script import SmtLibCommand
 from pysmt.logics import get_closer_smtlib_logic
+from pysmt.constants import Fraction
 
 
 class TestRegressions(TestCase):
@@ -272,9 +272,7 @@ class TestRegressions(TestCase):
 
     def test_smtlib_info_quoting(self):
         cmd = SmtLibCommand(smtcmd.SET_INFO, [":source", "This\nis\nmultiline!"])
-        outstream = cStringIO()
-        cmd.serialize(outstream)
-        output = outstream.getvalue()
+        output = cmd.serialize_to_string()
         self.assertEqual(output, "(set-info :source |This\nis\nmultiline!|)")
 
     def test_parse_define_fun(self):
@@ -290,6 +288,11 @@ class TestRegressions(TestCase):
         parser = SmtLibParser()
         buffer_ = cStringIO(smtlib_input)
         parser.get_script(buffer_)
+
+    def test_simplify_times(self):
+        a,b = Real(5), Real((1,5))
+        f = Times(a,b).simplify()
+        self.assertEqual(f.constant_value(), 1)
 
     @skipIfSolverNotAvailable("yices")
     def test_yices_push(self):
@@ -358,6 +361,16 @@ class TestRegressions(TestCase):
             self.assertTrue(s.solve())
             self.assertEqual(s.get_value(Select(x, BV(1, 16))), BV(1, 16))
             self.assertIsNotNone(s.get_value(x))
+
+
+    def test_smtlib_define_fun_serialization(self):
+        smtlib_input = "(define-fun init ((x Bool)) Bool (and x (and x (and x (and x (and x (and x x)))))))"
+        parser = SmtLibParser()
+        buffer_ = cStringIO(smtlib_input)
+        s = parser.get_script(buffer_)
+        for c in s:
+            res = c.serialize_to_string()
+        self.assertEqual(res, smtlib_input)
 
 
 if __name__ == "__main__":

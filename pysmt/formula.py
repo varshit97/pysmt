@@ -29,16 +29,20 @@ its definition.
 
 import collections
 
-from fractions import Fraction
 from six.moves import xrange
 
 import pysmt.typing as types
 import pysmt.operators as op
 
-from pysmt.utils import is_python_integer
 from pysmt.fnode import FNode, FNodeContent
 from pysmt.exceptions import UndefinedSymbolError
 from pysmt.walkers.identitydag import IdentityDagWalker
+from pysmt.constants import Fraction
+from pysmt.constants import (is_pysmt_fraction, is_python_rational,
+                             pysmt_fraction_from_rational)
+from pysmt.constants import (is_pysmt_integer,
+                             is_python_integer,
+                             pysmt_integer_from_integer)
 
 
 class FormulaManager(object):
@@ -117,7 +121,9 @@ class FormulaManager(object):
         if s is None:
             return self._create_symbol(name, typename)
         if not s.symbol_type() == typename:
-            raise TypeError("%s != %s" % (s.symbol_type(), typename))
+            raise TypeError("Trying to redefine symbol '%s' with a new type. "
+                            "Previous type was '%s' new type is '%s'" %
+                            (name, s.symbol_type(), typename))
         return s
 
     # Node definitions start here
@@ -204,15 +210,26 @@ class FormulaManager(object):
         """
         return self.create_node(node_type=op.MINUS, args=(left, right))
 
-    def Times(self, left, right):
-        """ Creates an expression of the form:
-            left * right
+    def Times(self, *args):
+        """ Creates a multiplication of terms
+
+        This function has polimorphic n-arguments:
+          - Times(a,b,c)
+          - Times([a,b,c])
 
         Restriction:
-          - Left and Right must be both INT or REAL type
-          - Only linear expressions are allowed
+         - Arguments must be all of the same type
+         - Arguments must be INT or REAL
         """
-        return self.create_node(node_type=op.TIMES, args=(left, right))
+        tuple_args = self._polymorph_args_to_tuple(args)
+        if len(tuple_args) == 0:
+            raise TypeError("Cannot create a Times without arguments.")
+
+        if len(tuple_args) == 1:
+            return tuple_args[0]
+        else:
+            return self.create_node(node_type=op.TIMES,
+                                    args=tuple_args)
 
     def Pow(self, base, exponent):
         """ Creates the n-th power of the base.
@@ -302,18 +319,17 @@ class FormulaManager(object):
           - A tuple (n,d)
           - A long or int n
           - A float
+          - (Optionally) a mpq or mpz object
         """
         if value in self.real_constants:
             return self.real_constants[value]
 
-        if type(value) == Fraction:
+        if is_pysmt_fraction(value):
             val = value
         elif type(value) == tuple:
             val = Fraction(value[0], value[1])
-        elif is_python_integer(value):
-            val = Fraction(value, 1)
-        elif type(value) == float:
-            val = Fraction.from_float(value)
+        elif is_python_rational(value):
+            val = pysmt_fraction_from_rational(value)
         else:
             raise TypeError("Invalid type in constant. The type was:" + \
                             str(type(value)))
@@ -329,15 +345,18 @@ class FormulaManager(object):
         if value in self.int_constants:
             return self.int_constants[value]
 
-        if is_python_integer(value):
-            n = self.create_node(node_type=op.INT_CONSTANT,
-                                 args=tuple(),
-                                 payload=value)
-            self.int_constants[value] = n
-            return n
+        if is_pysmt_integer(value):
+            val = value
+        elif is_python_integer(value):
+            val = pysmt_integer_from_integer(value)
         else:
             raise TypeError("Invalid type in constant. The type was:" + \
                             str(type(value)))
+        n = self.create_node(node_type=op.INT_CONSTANT,
+                             args=tuple(),
+                             payload=val)
+        self.int_constants[value] = n
+        return n
 
     def TRUE(self):
         """Return the boolean constant True."""
@@ -899,13 +918,14 @@ class FormulaManager(object):
     # Helper functions
     #
     def normalize(self, formula):
-        """ Returns the formula normalized to the current Formula Manager.
+        """Returns the formula normalized to the current Formula Manager.
 
         This method is useful to contextualize a formula coming from another
         formula manager.
-        E.g., f_a is defined with the FormulaManager a, and we want to obtain f_b
-              that is the formula f_a expressed on the FormulaManager b :
-               f_b = b.normalize(f_a)
+
+        E.g., f_a is defined with the FormulaManager a, and we want to
+              obtain f_b that is the formula f_a expressed on the
+              FormulaManager b : f_b = b.normalize(f_a)
         """
         # TODO: name clash with formula normalization
         # TODO: Move this out of the manager and into ad-hoc function

@@ -41,11 +41,13 @@ class SizeOracle(pysmt.walkers.DagWalker):
     # - LEAVES     : counts the number of leaves in the formula seen as a tree
     # - DEPTH      : counts the maximum number of levels in the formula
     # - SYMBOLS    : counts the number of different symbols occurring in the formula
+    # - BOOL_DAG   : counts the dag size by considering theory atoms as leaf
     (MEASURE_TREE_NODES,
      MEASURE_DAG_NODES,
      MEASURE_LEAVES,
      MEASURE_DEPTH,
-     MEASURE_SYMBOLS) = range(5)
+     MEASURE_SYMBOLS,
+     MEASURE_BOOL_DAG) = range(6)
 
     def __init__(self, env=None):
         pysmt.walkers.DagWalker.__init__(self, env=env)
@@ -55,7 +57,9 @@ class SizeOracle(pysmt.walkers.DagWalker):
                          SizeOracle.MEASURE_DAG_NODES: self.walk_count_dag,
                          SizeOracle.MEASURE_LEAVES: self.walk_count_leaves,
                          SizeOracle.MEASURE_DEPTH: self.walk_count_depth,
-                         SizeOracle.MEASURE_SYMBOLS: self.walk_count_symbols}
+                         SizeOracle.MEASURE_SYMBOLS: self.walk_count_symbols,
+                         SizeOracle.MEASURE_BOOL_DAG: self.walk_count_bool_dag,
+                        }
 
 
     def set_walking_measure(self, measure):
@@ -63,13 +67,15 @@ class SizeOracle(pysmt.walkers.DagWalker):
             raise NotImplementedError
         self.set_function(self.measure_to_fun[measure], *op.ALL_TYPES)
 
-
     def _get_key(self, formula, measure, **kwargs):
-        # Memoize using a tuple (measure, formula)
+        """Memoize using a tuple (measure, formula)."""
         return (measure, formula)
 
-
     def get_size(self, formula, measure=None):
+        """Return the size of the formula according to the specified measure.
+
+        The default measure is MEASURE_TREE_NODES.
+        """
         if measure is None:
             # By default, count tree nodes
             measure = SizeOracle.MEASURE_TREE_NODES
@@ -78,10 +84,10 @@ class SizeOracle(pysmt.walkers.DagWalker):
         res = self.walk(formula, measure=measure)
 
         if measure == SizeOracle.MEASURE_DAG_NODES or \
-           measure == SizeOracle.MEASURE_SYMBOLS:
+           measure == SizeOracle.MEASURE_SYMBOLS or \
+           measure == SizeOracle.MEASURE_BOOL_DAG :
             return len(res)
         return res
-
 
     def walk_count_tree(self, formula, args, **kwargs):
         #pylint: disable=unused-argument
@@ -109,6 +115,11 @@ class SizeOracle(pysmt.walkers.DagWalker):
             return frozenset([formula]) | a_res
         return a_res
 
+    def walk_count_bool_dag(self, formula, args, measure, **kwargs):
+        #pylint: disable=unused-argument
+        if formula.is_theory_relation():
+            return frozenset([formula])
+        return frozenset([formula]) | frozenset([x for s in args for x in s])
 
 
 class QuantifierOracle(pysmt.walkers.DagWalker):
@@ -223,14 +234,12 @@ class TheoryOracle(pysmt.walkers.DagWalker):
 
     def walk_times(self, formula, args, **kwargs):
         """Extends the Theory with Non-Linear, if needed."""
-        assert len(args) == 2
         theory_out = args[0]
         for t in args[1:]:
             theory_out = theory_out.combine(t)
-        # Check for non-linear
-        left, right = formula.args()
-        if len(left.get_free_variables()) != 0 and \
-           len(right.get_free_variables()) != 0:
+        # Check for non-linear counting the arguments having at least
+        # one free variable
+        if sum(1 for x in formula.args() if x.get_free_variables()) > 1:
             theory_out = theory_out.set_linear(False)
         # This is  not in DL anymore
         theory_out = theory_out.set_difference_logic(False)
