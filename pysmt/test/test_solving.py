@@ -532,5 +532,19 @@ class TestBasic(TestCase):
         with self.assertRaises(ValueError):
             Solver(logic=QF_BOOL, invalid_option=False)
 
+    @skipIfNoSolverForLogic(QF_BOOL)
+    def test_options_random_seed(self):
+        for sname in get_env().factory.all_solvers(logic=QF_BOOL):
+            if sname == "yices":
+                print("Skipping yices")
+                continue
+            if sname in ["btor", "bdd"]:
+                with self.assertRaises(ValueError):
+                    Solver(name=sname, random_seed=42)
+            else:
+                s = Solver(name=sname, random_seed=42)
+                self.assertIsNotNone(s)
+
+
 if __name__ == '__main__':
     main()

@@ -54,6 +54,9 @@ class BoolectorSolver(IncrementalTrackingSolver,
         self.btor.Set_opt("incremental", 1)
         if self.options.generate_models:
             self.btor.Set_opt("model_gen", 1)
+        if self.options.random_seed is not None:
+            raise ValueError("BTOR Does not support Random Seed setting.")
+
         self.converter = BTORConverter(environment, self.btor)
         self.mgr = environment.formula_manager
         self.declarations = {}

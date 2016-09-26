@@ -122,7 +122,8 @@ class Z3Solver(IncrementalTrackingSolver, UnsatCoreSolver,
 
         if self.options.unsat_cores_mode is not None:
             self.z3.set(unsat_core=True)
-
+        if self.options.random_seed is not None:
+            self.z3.set(random_seed=self.options.random_seed)
         self.declarations = set()
         self.converter = Z3Converter(environment, z3_ctx=self.z3.ctx)
         self.mgr = environment.formula_manager

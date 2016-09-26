@@ -168,6 +168,11 @@ class MathSAT5Solver(IncrementalTrackingSolver, UnsatCoreSolver,
                                             "1")
             assert check == 0
 
+        if options.random_seed is not None:
+            check = mathsat.msat_set_option(self.msat_config,
+                                            "random_seed",
+                                            str(options.random_seed))
+
         if debugFile is not None:
             mathsat.msat_set_option(self.msat_config,
                                     "debug.api_call_trace", "1")

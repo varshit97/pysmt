@@ -69,6 +69,10 @@ class CVC4Solver(Solver, SmtLibBasicSolver, SmtLibIgnoreMixin):
             self.cvc4.setOption("produce-models", CVC4.SExpr("true"))
         if self.options.incremental:
             self.cvc4.setOption("incremental", CVC4.SExpr("true"))
+        if self.options.random_seed is not None:
+            self.cvc4.setOption("random-seed",
+                                CVC4.SExpr(str(self.options.random_seed)))
+
         self.declarations = set()
         self.cvc4.setLogic(self.logic_name)
 

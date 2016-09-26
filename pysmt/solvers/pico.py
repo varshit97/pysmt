@@ -51,7 +51,12 @@ class PicosatSolver(Solver):
         self.cnfizer = CNFizer(environment=environment)
         self.latest_model = None
         self._var_ids = {}
-
+        if self.options.random_seed is not None:
+            picosat.picosat_set_seed(self.pico, self.options.random_seed)
+        raise NotImplementedError("All solvers should have an 'optionhandler' "
+                                  "that takes care of initializing the options"
+                                  "during init, but also after a reset.
+                                  See msat")
 
     def _get_var_id(self, symbol):
         if not symbol.is_symbol(types.BOOL):

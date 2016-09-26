@@ -76,6 +76,7 @@ class YicesSolver(Solver, SmtLibBasicSolver, SmtLibIgnoreMixin):
 
         self.yices = yicespy.yices_new_context(None)
         # MG: TODO: Set options!!!
+        raise NotImplementedError("Support for Options in Yices is missing")
         self.converter = YicesConverter(environment)
         self.mgr = environment.formula_manager
         self.model = None

@@ -68,29 +68,6 @@ class BddOptions(SolverOptions):
                      ("reordering_algorithm", CUDD_REORDER_SIFT),
                     ]
 
-    def __init__(self, **kwargs):
-        SolverOptions.__init__(self, **kwargs)
-
-        if self.unsat_cores_mode is not None:
-            # Check if, for some reason, unsat cores are
-            # required. In case, raise an error.
-            #
-            # TODO: This should be within the Solver, here we should
-            # only check that options are set and non-contraddicting.
-            #
-            raise NotImplementedError("BddSolver does not "\
-                                      "support unsat cores")
-
-    # @classmethod
-    # def from_base_options(cls, base_options):
-    #     generate_models=base_options.generate_models
-    #     unsat_cores_mode=base_options.unsat_cores_mode
-    #     incremental=base_options.incremental
-    #     return BddOptions(generate_models=generate_models,
-    #                       unsat_cores_mode=unsat_cores_mode,
-    #                       incremental=incremental)
-
-
 
 class BddSolver(Solver):
     LOGICS = [ pysmt.logics.QF_BOOL, pysmt.logics.BOOL ]
@@ -120,6 +97,12 @@ class BddSolver(Solver):
             self.ddmanager.AutodynEnable(self.options.reordering_algorithm)
         else:
             self.ddmanager.AutodynDisable()
+
+        if self.options.random_seed is not None:
+            raise ValueError("BddSolver does not support 'random_seed' option.")
+        if self.options.unsat_cores_mode is not None:
+            raise ValueError("BddSolver does not support 'unsat cores mode' option.")
+
 
         # This stack keeps a pair (Expr, Bdd), with the semantics that
         # the bdd at the i-th element of the list contains the bdd of

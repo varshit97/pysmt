@@ -26,6 +26,7 @@ class SolverOptions(object):
     VALID_OPTIONS = [("generate_models", True),
                      ("unsat_cores_mode", None),
                      ("incremental", True),
+                     ("random_seed", None),
     ]
 
     def __init__(self, **kwargs):
