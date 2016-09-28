@@ -18,9 +18,12 @@
 from six.moves import xrange
 from six.moves import cStringIO
 
+import pysmt.logics as logics
+import pysmt.smtlib.commands as smtcmd
 from pysmt.shortcuts import (Real, Plus, Symbol, Equals, And, Bool, Or,
                              Div, LT, LE, Int, ToReal, Iff, Exists, Times, FALSE,
-                             BVLShr, BVLShl, BVAShr, BV, BVAdd, Select)
+                             BVLShr, BVLShl, BVAShr, BV, BVAdd, BVULT, BVMul,
+                             Select)
 from pysmt.shortcuts import Solver, get_env, qelim, get_model, TRUE, ExactlyOne
 from pysmt.typing import REAL, BOOL, INT, BVType, FunctionType, ArrayType
 from pysmt.test import (TestCase, skipIfSolverNotAvailable, skipIfNoSolverForLogic,
@@ -31,9 +34,7 @@ from pysmt.test.examples import get_example_formulae
 from pysmt.environment import Environment
 from pysmt.rewritings import cnf_as_set
 from pysmt.smtlib.parser import SmtLibParser
-
-import pysmt.logics as logics
-import pysmt.smtlib.commands as smtcmd
+from pysmt.smtlib.commands import DECLARE_FUN, DEFINE_FUN
 from pysmt.smtlib.script import SmtLibCommand
 from pysmt.logics import get_closer_smtlib_logic
 from pysmt.constants import Fraction
@@ -289,6 +290,28 @@ class TestRegressions(TestCase):
         buffer_ = cStringIO(smtlib_input)
         parser.get_script(buffer_)
 
+    def test_parse_bvx_var(self):
+        """bvX is a valid identifier."""
+        smtlib_input = """
+        (declare-fun bv1 () (_ BitVec 8))
+        (assert (bvult (_ bv0 8) (bvmul (bvadd bv1 (_ bv1 8)) (_ bv5 8))))
+        (check-sat)"""
+        parser = SmtLibParser()
+        buffer_ = cStringIO(smtlib_input)
+        script = parser.get_script(buffer_)
+        # Check Parsed result
+        iscript = iter(script)
+        cmd = next(iscript)
+        self.assertEqual(cmd.name, DECLARE_FUN)
+        bv1 = cmd.args[0]
+        self.assertEqual(bv1.symbol_type().width, 8)
+        cmd = next(iscript)
+        parsed_f = cmd.args[0]
+        target_f = BVULT(BV(0, 8),
+                         BVMul(BVAdd(bv1, BV(1, 8)), BV(5, 8)))
+        self.assertEqual(parsed_f, target_f)
+
+
     def test_simplify_times(self):
         a,b = Real(5), Real((1,5))
         f = Times(a,b).simplify()
@@ -371,6 +394,21 @@ class TestRegressions(TestCase):
         for c in s:
             res = c.serialize_to_string()
         self.assertEqual(res, smtlib_input)
+
+    @skipIfSolverNotAvailable("z3")
+    def test_z3_nary_back(self):
+        from z3 import Tactic
+        r = Symbol("r", REAL)
+        s = Symbol("s", REAL)
+        t = Symbol("t", REAL)
+        f = Equals(Times(r,s,t), Real(0))
+
+        with Solver(name="z3") as solver:
+            z3_f = solver.converter.convert(f)
+            z3_f = Tactic('simplify')(z3_f).as_expr()
+            fp = solver.converter.back(z3_f)
+            self.assertValid(Iff(f, fp), (f, fp))
+
 
 
 if __name__ == "__main__":
