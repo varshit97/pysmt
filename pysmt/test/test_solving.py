@@ -279,6 +279,7 @@ class TestBasic(TestCase):
         for (f, validity, satisfiability, logic) in get_example_formulae():
             if not logic.theory.linear: continue
             if not logic.quantifier_free: continue
+            if logic.theory.strings: continue
             if logic.theory.bit_vectors: continue
             s = Solver(name='z3')
             z3_f = s.converter.convert(f)

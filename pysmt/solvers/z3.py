@@ -599,6 +599,10 @@ class Z3Converter(Converter, DagWalker):
             sort_ast = self.z3IntSort.ast
         elif symbol_type.is_array_type():
             sort_ast = self._type_to_z3(symbol_type).ast
+        elif symbol_type.is_string_type():
+            raise ConvertExpressionError(message=("Unsupported string symbol: %s" %
+                                                  str(formula)),
+                                         expression=formula)
         else:
             assert symbol_type.is_bv_type()
             sort_ast = self._type_to_z3(symbol_type).ast
