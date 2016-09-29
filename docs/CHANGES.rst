@@ -39,6 +39,13 @@ BACKWARDS INCOMPATIBLE CHANGES:
   combined into a unique parsing.py file. Code importing those modules
   directly needs to be updated.
 
+* Removed deprecated methods:
+
+  * FNode.get_dependencies (use FNode.get_free_variables)
+  * FNode.get_sons (use FNode.get_args)
+  * FNode.is_boolean_operator (use FNode.is_bool_op)
+  * pysmt.test.skipIfNoSolverAvailable
+
 
 General:
 
@@ -74,7 +81,7 @@ General:
   * pysmt.__version__ : String representation of VERSION (following PEP 440)
   * pysmt.git_version : A simple function that returns the version including git information.
 
-  install.py (pysmt-install) and shell.py gain a new --version option that 
+  install.py (pysmt-install) and shell.py gain a new --version option that
   uses git_version to display the version information.
 
 
@@ -120,10 +127,10 @@ Solvers:
 
 * Z3 Converter Improvements (PR #321):
 
-  * Optimized Conversion to Z3 Solver Forward conversion is 4x faster, 
-    and 20% more memory efficient, because we work at a lower level 
-    of the Z3 Python API and do not create intermediate AstRef objects 
-    anymore.  Back conversion is 2x faster because we use a direct 
+  * Optimized Conversion to Z3 Solver Forward conversion is 4x faster,
+    and 20% more memory efficient, because we work at a lower level
+    of the Z3 Python API and do not create intermediate AstRef objects
+    anymore.  Back conversion is 2x faster because we use a direct
     dispatching method based on the Z3 OP type, instead of the
     big conditional that we were using previously.
 
