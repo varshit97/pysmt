@@ -120,21 +120,21 @@ Solvers:
 
 * Z3 Converter Improvements (PR #321):
 
- * Optimized Conversion to Z3 Solver Forward conversion
-   is 4x faster, and 20% more memory efficient, becuase we work at a
-   lower level of the Z3 Python API and do not create intermediate
-   AstRef objects anymore.  Back conversion is 2x faster because we use
-   a direct dispatching method based on the Z3 OP type, instead of the
-   big conditional that we were using previously.
+  * Optimized Conversion to Z3 Solver Forward conversion is 4x faster, 
+    and 20% more memory efficient, because we work at a lower level 
+    of the Z3 Python API and do not create intermediate AstRef objects 
+    anymore.  Back conversion is 2x faster because we use a direct 
+    dispatching method based on the Z3 OP type, instead of the
+    big conditional that we were using previously.
 
- * Add back-conversion via SMT-LIB string buffer.
-   Z3Converter.back_via_smtlib() performs back conversion by printing the
-   formula as an SMT-LIB string, and parsing it back. For formulas of
-   significant size, this can be drastically faster than using the API.
+  * Add back-conversion via SMT-LIB string buffer.
+    Z3Converter.back_via_smtlib() performs back conversion by printing the
+    formula as an SMT-LIB string, and parsing it back. For formulas of
+    significant size, this can be drastically faster than using the API.
 
- * Extend back conversion to create new Symbols, if needed. This
-   always raise a warning alerting the user that a new symbol is being
-   implicitly defined.
+  * Extend back conversion to create new Symbols, if needed. This
+    always raise a warning alerting the user that a new symbol is being
+    implicitly defined.
 
 * OSX: Z3 and MathSAT can be installed with pysmt-install (PR #244)
 
