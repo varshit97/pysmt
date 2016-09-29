@@ -36,7 +36,22 @@ from pysmt.solvers.qelim import QuantifierEliminator
 
 
 class BddOptions(SolverOptions):
+    """Options for the BDD Solver.
+
+    * static_ordering: None, list of Symbols
+      Enable static ordering with the given list of symbols
+
+    * dynamic_reordering: True, False
+      Enable dynamic reordering
+
+    * reordering_algorithm: BddOptions.CUDD_ALL_REORDERING_ALGORITHMS
+      Specify which reordering algorithm to use when dynamic_reording
+      is enabled.
+
+    """
     ## CUDD Reordering algorithms
+    CUDD_ALL_REORDERING_ALGORITHMS = range(1,23)
+
     CUDD_REORDER_SAME, \
     CUDD_REORDER_NONE, \
     CUDD_REORDER_RANDOM, \
@@ -58,15 +73,55 @@ class BddOptions(SolverOptions):
     CUDD_REORDER_LINEAR, \
     CUDD_REORDER_LINEAR_CONVERGE, \
     CUDD_REORDER_LAZY_SIFT, \
-    CUDD_REORDER_EXACT = range(22)
+    CUDD_REORDER_EXACT = CUDD_ALL_REORDERING_ALGORITHMS
 
-    CUDD_ALL_REORDERING_ALGORITHMS = range(1, 22)
+    def __init__(self, **base_options):
+        SolverOptions.__init__(self, **base_options)
 
-    VALID_OPTIONS = SolverOptions.VALID_OPTIONS + \
-                    [("static_ordering", None),
-                     ("dynamic_reordering", False),
-                     ("reordering_algorithm", CUDD_REORDER_SIFT),
-                    ]
+        if self.random_seed is not None:
+            raise ValueError("'random_seed' option not supported.")
+        if self.unsat_cores_mode is not None:
+            raise ValueError("'unsat_cores_mode' option not supported.")
+
+        for k,v in self.solver_options.items():
+            if k == "static_ordering":
+                if v is not None:
+                    try:
+                        valid = all(x.is_symbol(types.BOOL) for x in v)
+                    except:
+                        valid = False
+                    if not valid:
+                        raise ValueError("The BDD static ordering must be a " \
+                                         "list of Boolean variables")
+            elif k == "dynamic_reordering":
+                if v not in (True, False):
+                    raise ValueError("Invalid value %s for '%s'" % \
+                                     (str(k),str(v)))
+            elif k == "reordering_algorithm":
+                if v not in BddOptions.CUDD_ALL_REORDERING_ALGORITHMS:
+                    raise ValueError("Invalid value %s for '%s'" % \
+                                     (str(k),str(v)))
+            else:
+                raise ValueError("Unrecognized option '%s'." % k)
+            # Store option
+            setattr(self, k, v)
+
+        # Set Defaults
+        if not hasattr(self, "dynamic_reordering"):
+            self.dynamic_reordering = False
+        if not hasattr(self, "reordering_algorithm"):
+            if not self.dynamic_reordering:
+                self.reordering_algorithm = None
+            else:
+                self.reordering_algorithm = BddOptions.CUDD_REORDER_SIFT
+        if not hasattr(self, "static_ordering"):
+            self.static_ordering = None
+
+        # Consistency check
+        if not self.dynamic_reordering and self.reordering_algorithm is not None:
+            raise ValueError("reordering_algorithm requires dynamic_reordering.")
+
+# EOC BddOptions
 
 
 class BddSolver(Solver):
@@ -84,25 +139,7 @@ class BddSolver(Solver):
         self.ddmanager = repycudd.DdManager()
         self.converter = BddConverter(environment=self.environment,
                                       ddmanager=self.ddmanager)
-
-        # Impose initial ordering
-        if self.options.static_ordering is not None:
-            for var in self.options.static_ordering:
-                if not var.is_symbol(types.BOOL):
-                    raise ValueError("The BDD static ordering must be a " \
-                                     "list of Boolean variables")
-                self.declare_variable(var)
-
-        if self.options.dynamic_reordering:
-            self.ddmanager.AutodynEnable(self.options.reordering_algorithm)
-        else:
-            self.ddmanager.AutodynDisable()
-
-        if self.options.random_seed is not None:
-            raise ValueError("BddSolver does not support 'random_seed' option.")
-        if self.options.unsat_cores_mode is not None:
-            raise ValueError("BddSolver does not support 'unsat cores mode' option.")
-
+        self._handle_options()
 
         # This stack keeps a pair (Expr, Bdd), with the semantics that
         # the bdd at the i-th element of the list contains the bdd of
@@ -113,6 +150,17 @@ class BddSolver(Solver):
 
         self.backtrack = []
         self.latest_model = None
+
+    def _handle_options(self):
+        # Impose initial ordering
+        if self.options.static_ordering is not None:
+            for var in self.options.static_ordering:
+                self.declare_variable(var)
+
+        if self.options.dynamic_reordering:
+            self.ddmanager.AutodynEnable(self.options.reordering_algorithm)
+        else:
+            self.ddmanager.AutodynDisable()
 
     @clear_pending_pop
     def reset_assertions(self):

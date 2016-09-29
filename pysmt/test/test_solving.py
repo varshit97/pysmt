@@ -529,8 +529,10 @@ class TestBasic(TestCase):
         solver = Solver(logic=QF_BOOL, incremental=True)
         self.assertIsNotNone(solver)
         # Options are enforced at construction time
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             Solver(logic=QF_BOOL, invalid_option=False)
+        with self.assertRaises(ValueError):
+            Solver(logic=QF_BOOL, solver_options={'invalid': None})
 
     @skipIfNoSolverForLogic(QF_BOOL)
     def test_options_random_seed(self):

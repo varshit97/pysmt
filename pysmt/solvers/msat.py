@@ -131,20 +131,24 @@ class MathSAT5Model(Model):
         """Returns whether the model contains a value for 'x'."""
         return x in (v for v, _ in self)
 
+
 class MathSAT5Solver(IncrementalTrackingSolver, UnsatCoreSolver,
                      SmtLibBasicSolver, SmtLibIgnoreMixin):
 
     LOGICS = PYSMT_QF_LOGICS - set(l for l in PYSMT_QF_LOGICS if not l.theory.linear)
 
     def __init__(self, environment, logic, debugFile=None, **options):
-        # TODO: DebugFile should be an option
         IncrementalTrackingSolver.__init__(self,
                                            environment=environment,
                                            logic=logic,
                                            **options)
 
         self.msat_config = mathsat.msat_create_default_config(str(logic))
-        self._prepare_config(self.options, debugFile)
+        if debugFile is not None:
+            warn("debugFile is deprecated. pass the option 'debug.api_call_trace_filename' instead.",
+                 stacklevel=2)
+            self.options.solver_options["debug.api_call_trace_filename"] = debugFile
+        self._handle_options()
         self.msat_env = MSatEnv(self.msat_config)
         mathsat.msat_destroy_config(self.msat_config)
 
@@ -155,33 +159,32 @@ class MathSAT5Solver(IncrementalTrackingSolver, UnsatCoreSolver,
         self.mgr = environment.formula_manager
         self.converter = MSatConverter(environment, self.msat_env)
 
-    def _prepare_config(self, options, debugFile=None):
+    def _handle_options(self):
         """Sets the relevant options in self.msat_config"""
-        if options.generate_models:
-            check = mathsat.msat_set_option(self.msat_config, "model_generation",
-                                            "true")
-            assert check == 0
+        o = self.options
+        if o.generate_models:
+            self._set_option("model_generation", "true")
 
-        if options.unsat_cores_mode is not None:
-            check = mathsat.msat_set_option(self.msat_config,
-                                            "unsat_core_generation",
-                                            "1")
-            assert check == 0
+        if o.unsat_cores_mode is not None:
+            self._set_option("unsat_core_generation", "1")
 
-        if options.random_seed is not None:
-            check = mathsat.msat_set_option(self.msat_config,
-                                            "random_seed",
-                                            str(options.random_seed))
+        if o.random_seed is not None:
+            self._set_option("random_seed", str(o.random_seed))
 
-        if debugFile is not None:
-            mathsat.msat_set_option(self.msat_config,
-                                    "debug.api_call_trace", "1")
-            mathsat.msat_set_option(self.msat_config,
-                                    "debug.api_call_trace_filename",
-                                    debugFile)
+        for k,v in o.solver_options.items():
+            self._set_option(str(k), str(v))
 
-        mathsat.msat_set_option(self.msat_config,
-                                "theory.bv.div_by_zero_mode", "0")
+        if "debug.api_call_trace_filename" in o.solver_options:
+            self._set_option("debug.api_call_trace", "1")
+
+        # Force semantics of division by 0
+        self._set_option("theory.bv.div_by_zero_mode", "0")
+
+    def _set_option(self, name, value):
+        """Sets the given option. Might raise a ValueError."""
+        check = mathsat.msat_set_option(self.msat_config, name, value)
+        if check != 0:
+            raise ValueError("Error setting the option '%s=%s'" % (name,value))
 
     @clear_pending_pop
     def _reset_assertions(self):

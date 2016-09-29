@@ -115,21 +115,33 @@ class Z3Solver(IncrementalTrackingSolver, UnsatCoreSolver,
                                            environment=environment,
                                            logic=logic,
                                            **options)
-        # Here we could use:
-        # self.z3 = z3.SolverFor(str(logic))
-        # But it seems to have problems with quantified formulae
-        self.z3 = z3.Solver()
-
-        if self.options.unsat_cores_mode is not None:
-            self.z3.set(unsat_core=True)
-        if self.options.random_seed is not None:
-            self.z3.set(random_seed=self.options.random_seed)
+        self.z3 = z3.SolverFor(str(logic))
+        self._handle_options()
         self.declarations = set()
         self.converter = Z3Converter(environment, z3_ctx=self.z3.ctx)
         self.mgr = environment.formula_manager
 
         self._name_cnt = 0
         return
+
+    def _handle_options(self):
+        self.set_option('model', self.options.generate_models)
+
+        if self.options.unsat_cores_mode is not None:
+            self.set_option('unsat_core', True)
+        if self.options.random_seed is not None:
+            self.set_option('random_seed', self.options.random_seed)
+        for k,v in self.options.solver_options:
+            try:
+                self.set_option(str(k), v)
+            except z3.Z3Exception:
+                raise ValueError("Error setting the option '%s=%s'" % (k,v))
+
+    def _set_option(self, name, value):
+        try:
+            self.z3.set(name, value)
+        except z3.Z3Exception:
+            raise ValueError("Error setting the option '%s=%s'" % (name, value))
 
     @clear_pending_pop
     def _reset_assertions(self):
@@ -146,6 +158,8 @@ class Z3Solver(IncrementalTrackingSolver, UnsatCoreSolver,
         term = self.converter.convert(formula)
 
         if self.options.unsat_cores_mode is not None:
+            # TODO: IF unsat_cores_mode is all, then we add this fresh variable.
+            # Otherwise, we should track this only if it is named.
             key = self.mgr.FreshSymbol(template="_assertion_%d")
             tkey = self.converter.convert(key)
             self.z3.assert_and_track(term, tkey)
