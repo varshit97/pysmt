@@ -70,14 +70,12 @@ General:
 
 * Add Version information (Issue #299 / PR #303)
 
-    * pysmt.VERSION : A tuple containing the version information
-    * pysmt.__version__ : String representation of VERSION (following
-      PEP 440)
-    * pysmt.git_version : A simple function that returns the version including
-      git information.
+  * pysmt.VERSION : A tuple containing the version information
+  * pysmt.__version__ : String representation of VERSION (following PEP 440)
+  * pysmt.git_version : A simple function that returns the version including git information.
 
-    install.py (pysmt-install) and shell.py gain a new --version
-    option that uses git_version to display the version information.
+  install.py (pysmt-install) and shell.py gain a new --version option that 
+  uses git_version to display the version information.
 
 
 * Shortcuts: read_smtlib() and write_smtlib()
